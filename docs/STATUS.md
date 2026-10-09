@@ -30,8 +30,32 @@ Texto e imagem por cena, âncoras em dois eixos, geometria compartilhada desktop
 
 ## Seletor de salvamento
 
-O primeiro Salvar usa FileChooser.showSaveDialog, com nome inicial game.json e título Salvar projeto. A pasta que contém o arquivo continua sendo a raiz do jogo (assets/ ao lado). Salvamentos seguintes atualizam o mesmo arquivo. O novo projeto continua impedido de sobrescrever um projeto existente; abra-o pela ação Abrir.
+O primeiro Salvar usa FileChooser.showSaveDialog, com nome inicial game.json e título Salvar projeto. A pasta que contém o arquivo continua sendo a raiz do jogo (assets/ ao lado). Salvamentos seguintes atualizam o mesmo arquivo. O arquivo escolhido pode sobrescrever um game.json existente; a confirmação é feita pelo diálogo nativo. A gravação usa arquivo temporário e REPLACE_EXISTING.
 
 ## Último projeto salvo
 
 Abrir agora usa showOpenDialog para game.json, consistente com Salvar. Um carregamento inválido preserva o documento ativo. Salvar registra o caminho apenas depois da gravação do jogo; a preferência local usa substituição por arquivo temporário. onMount restaura após montar Canvas/árvore. Falha na preferência não transforma um salvamento concluído em falha do jogo. Testes usam preferência isolada em build/test-state.
+
+## Seleção com botão direito
+
+Botão direito seleciona objetos/HUD sem mover ou redimensionar. Arraste e alça de HUD exigem um gesto iniciado com botão esquerdo, mantido pressionado. Soltar o mouse ou perder foco encerra o gesto.
+
+## Revisão dos seletores
+
+HUD: imagem, Trocar imagem HUD e Sprite abrem apenas o seletor de imagens com título próprio, filtro PNG/JPEG (incluindo extensões maiúsculas) e validação da imagem. Importação não chama Salvar implicitamente. Jogos ainda sem pasta guardam cópias temporárias e já mostram a imagem; Salvar publica esses assets junto ao documento. Cancelar HUD: imagem não cria elemento vazio. Cancelar uma troca preserva a imagem atual. Abrir usa JSON, Salvar usa diálogo de salvamento, e Exportar Android continua exigindo salvamento bem-sucedido antes do build. Temporários são removidos após salvar, trocar de projeto ou fechar o editor.
+
+## Diretório de imagens e rotação
+
+Preferência de diretório compartilhada para todas as importações, em last-image-directory.txt ao lado da preferência de último projeto. Importação validada atualiza a pasta; o editor usa fallback se não existir. Rotação de Entity persistida, default 0 para documentos antigos, transformações com save/restore nos dois Canvas e seleção por transformação inversa. Colisão AABB permanece sem rotação.
+
+## Altura do painel de objetos
+
+ScrollPane da árvore ocupa a altura disponível com VBox.vgrow ALWAYS, sem altura mínima imposta pelo conteúdo. fitToWidth mantém os itens dentro da largura do painel e a rolagem vertical continua disponível.
+
+## Duplicação e hierarquia
+
+Entity.parentId default vazio mantém compatibilidade. Hierarchy compartilha composição/inversão de posição e rotação, validação de ciclos, duplicação e desvínculo nos dois destinos. Editor desenha linhas de relação e usa coordenadas de mundo no hit-test/arraste; inspector edita coordenadas locais. Runtime aplica movimento em coordenadas de mundo e converte para local, com colisão AABB para o grupo movido contra objetos externos. Scripts ainda serão definidos com o usuário; não foram adicionados nesta etapa.
+
+## Persistência de metadados e identificação do projeto
+
+Salvar incorpora os campos do inspector de objeto/HUD, validando antes de gravar. lastEditedSceneId preserva a cena em edição; documentos antigos usam a cena inicial. Abrir também registra o caminho para a próxima sessão. O cabeçalho mostra o caminho completo de game.json em linha própria. Preferências ausentes deixam o projeto como não salvo, visível no cabeçalho; falhas de restauração continuam apresentadas na mensagem.

@@ -4,6 +4,7 @@ import java.util.*;
 public final class Game {
     public int version = 1;
     public String name = "Meu jogo", entrySceneId = "scene-1";
+    public String lastEditedSceneId = "";
     public List<Scene> scenes = new ArrayList<>();
     public static final class Scene {
         public String id = "scene-1", name = "Cena 1", background = "#172638";
@@ -13,7 +14,8 @@ public final class Game {
     }
     public static final class Entity {
         public String id = UUID.randomUUID().toString(), name = "Objeto", color = "#56b6c2", assetPath = "";
-        public double x = 2, y = 2, width = 1, height = 1, speed = 4;
+        public String parentId = "";
+        public double x = 2, y = 2, width = 1, height = 1, speed = 4, rotation = 0;
         public boolean solid = true, player = false;
         public Entity copy() { return Codec.GSON.fromJson(Codec.GSON.toJson(this), Entity.class); }
     }

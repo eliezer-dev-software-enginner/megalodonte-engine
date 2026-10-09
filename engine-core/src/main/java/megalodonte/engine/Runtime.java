@@ -21,9 +21,15 @@ public final class Runtime {
     }
     private void move(Game.Entity e, double dx, double dy) {
         double x = e.x, y = e.y;
-        e.x = Math.max(0, Math.min(scene.worldWidth-e.width, e.x+dx));
-        e.y = Math.max(0, Math.min(scene.worldHeight-e.height, e.y+dy));
-        for (Game.Entity other : scene.objects) if (other != e && other.solid && overlaps(e,other)) { e.x=x; e.y=y; return; }
+        var world=Hierarchy.pose(scene,e);
+        Hierarchy.setWorldPosition(scene,e,
+            Math.max(0,Math.min(scene.worldWidth-e.width,world.x()+dx)),
+            Math.max(0,Math.min(scene.worldHeight-e.height,world.y()+dy)));
+        for(var member:scene.objects)if(Hierarchy.descendant(scene,member,e)){
+            var bounds=Hierarchy.worldEntity(scene,member);
+            for(var other:scene.objects)if(other.solid && !Hierarchy.descendant(scene,other,e)
+                    && !Hierarchy.descendant(scene,e,other) && overlaps(bounds,Hierarchy.worldEntity(scene,other))){e.x=x;e.y=y;return;}
+        }
     }
     public static boolean overlaps(Game.Entity a, Game.Entity b) {
         return a.x < b.x+b.width && a.x+a.width > b.x && a.y < b.y+b.height && a.y+a.height > b.y;

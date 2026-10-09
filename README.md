@@ -32,4 +32,20 @@ Projetos antigos continuam válidos com HUD vazia. O formato scene.hud persiste 
 
 ## Abrir e restaurar projetos
 
-Abrir seleciona o arquivo game.json. Após um salvamento bem-sucedido, a engine guarda o caminho em ~/.config/megalodonte-engine/last-saved-project.txt e restaura esse projeto na próxima inicialização. Apenas abrir outro projeto não altera o último salvo. Se o arquivo foi movido, removido ou está inválido, o editor inicia com a demonstração e apresenta a falha; use Abrir para localizar o projeto e Salvar para atualizar o caminho.
+Abrir seleciona o arquivo game.json. Após um salvamento bem-sucedido, a engine guarda o caminho em ~/.config/megalodonte-engine/last-saved-project.txt e restaura esse projeto na próxima inicialização. Abrir também registra o projeto ativo para restauração. Se o arquivo foi movido, removido ou está inválido, o editor inicia com a demonstração e apresenta a falha; use Abrir para localizar o projeto e Salvar para atualizar o caminho.
+
+Importar uma imagem (HUD ou sprite) não exige salvar antes: o seletor mostra somente imagens. A engine mantém uma cópia temporária para preview e inclui o asset no projeto quando você clicar Salvar. Cancelar o seletor não cria HUD nem altera a imagem selecionada.
+
+O seletor de imagens lembra o último diretório utilizado, compartilhado entre HUD e sprites e preservado entre execuções. Cancelamento não altera a preferência; se a pasta deixou de existir, usa assets/ do projeto quando disponível.
+
+Objetos aceitam Rotação no inspector, em graus no sentido horário ao redor do centro. Clique Aplicar e Salvar para persistir. Desktop e Android renderizam a rotação; seleção no Canvas acompanha o retângulo rotacionado. Os colisores continuam AABB nas coordenadas originais, sem rotação física nesta etapa.
+
+## Duplicação e vínculos
+
+Selecione um objeto e use Duplicar objeto no inspector. A cópia recebe ID próprio, preserva propriedades e o pai e ganha pequeno deslocamento; filhos não são duplicados automaticamente.
+
+Para relacionar objetos, selecione o filho, clique Escolher pai e clique no pai pela cena ou lista. Escape cancela. Uma linha tracejada conecta seus centros no editor (oculta no Play/Android). O vínculo mantém a aparência inicial; depois, posição e rotação do filho passam a ser locais ao pai, herdando movimento e rotação. Desvincular preserva sua posição no mundo. Excluir um pai desvincula os filhos diretos sem movê-los. Ciclos e referências a objetos inexistentes são rejeitados. Relações ficam na mesma cena.
+
+Tamanho não é herdado como escala. Colisão permanece AABB em posições de mundo, sem rotação física do colisor; objetos relacionados como ancestrais/descendentes não bloqueiam uns aos outros.
+
+Salvar aplica automaticamente os campos do inspector antes de gravar; campos inválidos impedem o salvamento e mostram o motivo. A cena em edição é restaurada junto com o projeto. O topo identifica explicitamente o caminho absoluto do game.json ativo, ou informa que o projeto ainda não foi salvo.

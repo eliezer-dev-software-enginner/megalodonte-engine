@@ -81,6 +81,18 @@
     "worldSelected": {
       "type": "boolean",
       "initial": true
+    },
+    "rotation": {
+      "type": "string",
+      "initial": "0"
+    },
+    "parentName": {
+      "type": "string",
+      "initial": "Pai: nenhum"
+    },
+    "projectPath": {
+      "type": "string",
+      "initial": "Projeto: ainda não salvo"
     }
   },
   "view": {
@@ -259,6 +271,19 @@
         "type": "Text",
         "bind": {
           "text": "project"
+        }
+      },
+      {
+        "type": "Text",
+        "id": "projectPathText",
+        "bind": {
+          "text": "projectPath"
+        },
+        "props": {
+          "wrapWidth": 900
+        },
+        "style": {
+          "fontSize": 12
         }
       },
       {
@@ -533,7 +558,7 @@
                       {
                         "type": "Text",
                         "props": {
-                          "text": "Posição X"
+                          "text": "Posição X (local)"
                         },
                         "style": {
                           "fontSize": 11
@@ -551,7 +576,7 @@
                       {
                         "type": "Text",
                         "props": {
-                          "text": "Posição Y"
+                          "text": "Posição Y (local)"
                         },
                         "style": {
                           "fontSize": 11
@@ -639,6 +664,21 @@
                         }
                       },
                       {
+                        "type": "Text",
+                        "props": {
+                          "text": "Rotação (graus, sentido horário)"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "rotation"
+                        },
+                        "props": {
+                          "placeholder": "0"
+                        }
+                      },
+                      {
                         "type": "Button",
                         "props": {
                           "text": "Aplicar",
@@ -678,6 +718,42 @@
                         "type": "Text",
                         "props": {
                           "text": "Arraste objetos na cena"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "bind": {
+                          "text": "parentName"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Duplicar objeto",
+                          "height": 32
+                        },
+                        "events": {
+                          "onClick": "duplicateObject"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Escolher pai",
+                          "height": 32
+                        },
+                        "events": {
+                          "onClick": "chooseParent"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Desvincular do pai",
+                          "height": 32
+                        },
+                        "events": {
+                          "onClick": "detachParent"
                         }
                       }
                     ]

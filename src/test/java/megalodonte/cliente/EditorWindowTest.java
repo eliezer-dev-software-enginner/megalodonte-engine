@@ -47,6 +47,18 @@ class EditorWindowTest {
                     assertTrue(toolbarBounds.getMinY()>=0,"Toolbar clipped above scene: "+toolbarBounds);
                     assertTrue(toolbarBounds.getMaxY()<=stage.getScene().getHeight());
                     var session=app.current();
+                    session.invoke("addObject");
+                    session.invoke("duplicateObject");
+                    assertTrue(session.states().string("name").get().contains("cópia"));
+                    session.invoke("chooseParent");
+                    var treeHost=(javafx.scene.layout.Pane)session.component("tree").getJavaFxNode();
+                    var treeScroll=(javafx.scene.control.ScrollPane)treeHost.getChildren().getFirst();
+                    var tree=(javafx.scene.layout.VBox)treeScroll.getContent();
+                    ((javafx.scene.control.Button)tree.getChildren().getFirst()).fire();
+                    assertEquals("Pai: Jogador",session.states().get("parentName"));
+                    session.invoke("applyObject");
+                    session.invoke("detachParent");
+                    assertEquals("Pai: nenhum",session.states().get("parentName"));
                     session.invoke("addHudText");
                     session.states().set("hudText","Moedas: 42");
                     session.states().set("hudX","36");
