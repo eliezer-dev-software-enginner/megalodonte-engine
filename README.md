@@ -2,7 +2,7 @@
 
 Editor JavaFX com UI orientada a dados (JSONC), baseado no código do `megalodonte-cliente`, sem copiar `.git`. Login/cadastro e seus testes permanecem como referência; a tela inicial agora é o editor.
 
-Esta primeira implementação permite criar/abrir/salvar projetos externos, adicionar cenas, definir a cena inicial, criar/selecionar/arrastar/excluir objetos, editar transformações, importar sprites, alternar colisores AABB e controle do jogador. Play usa cópia do documento e movimento WASD/setas, preservando a edição. Android executa o mesmo núcleo com Canvas nativo e controles por toque.
+Crie jogos com cenas, objetos e hierarquia, sprites, tilemaps Tiled, colisões AABB, câmera fixa ou seguindo um objeto, música, HUD e scripts Java. Play usa uma cópia do documento e preserva a edição. Desktop e Android executam o mesmo núcleo; a renderização usa Canvas JavaFX e Canvas Android. A importação aproveita o formato dos projetos libGDX, sem depender de libGDX no runtime.
 
 ```bash
 bash gradlew run
@@ -19,6 +19,7 @@ O editor exige JDK 25. Dependências Megalodonte são resolvidas por composite b
 
 - [Arquitetura e referência Nojo](docs/ARCHITECTURE.md)
 - [Estado e próximos passos](docs/STATUS.md)
+- [Tilemaps, câmera, áudio e scripts Java](docs/GAMEPLAY.md)
 
 Validação realizada: testes desktop/núcleo/framework, renderização do editor, build do APK, lint Android e exportação de projeto externo. Ainda sem teste em dispositivo. Salve antes de usar Novo/Abrir: não há autosave nesta versão.
 
@@ -28,7 +29,7 @@ Use **HUD: texto** ou **HUD: imagem** na toolbar. Selecione pelo Canvas ou pela 
 
 HUD é uma camada sobre o mundo, independente da câmera. Referência 1280×720 com escala uniforme pela área disponível. Âncoras esquerda/topo usam offsets para dentro; direita/baixo também usam offsets para dentro; centro usa deslocamento a partir do centro. Texto é de uma linha, recortado pela caixa; imagens ocupam a caixa inteira. No Android, a referência é a área segura sem barras/recorte. Layouts muito estreitos podem exigir ajustar caixas e offsets.
 
-Projetos antigos continuam válidos com HUD vazia. O formato scene.hud persiste elementos text/image; botões, ações, multitoque e valores dinâmicos ficam para a próxima etapa.
+Projetos antigos continuam válidos com HUD vazia. **HUD: botão** cria um controle com nome de ação configurável. Scripts consultam essa ação; texto pode ser atualizado em tempo de execução. Android aceita vários toques simultâneos e libera as ações ao perder foco ou cancelar o gesto.
 
 ## Abrir e restaurar projetos
 
@@ -49,3 +50,15 @@ Para relacionar objetos, selecione o filho, clique Escolher pai e clique no pai 
 Tamanho não é herdado como escala. Colisão permanece AABB em posições de mundo, sem rotação física do colisor; objetos relacionados como ancestrais/descendentes não bloqueiam uns aos outros.
 
 Salvar aplica automaticamente os campos do inspector antes de gravar; campos inválidos impedem o salvamento e mostram o motivo. A cena em edição é restaurada junto com o projeto. O topo identifica explicitamente o caminho absoluto do game.json ativo, ou informa que o projeto ainda não foi salvo.
+
+## Exemplo completo e programação
+
+Para criar um projeto independente com tilemap, colisor, música WAV, câmera follow com fade, botões HUD e script de movimento:
+
+```bash
+bash gradlew createExample -PexampleDir=/caminho/novo/meu-exemplo
+```
+
+Escolha uma pasta sem game.json existente. Abra o game.json gerado na engine e clique Play. WASD/setas ou os botões de HUD movem o jogador. O botão **Scripts Java** abre o editor de código com números de linha, salvamento e diagnósticos do compilador. Anexe uma classe ao objeto, HUD ou cena; salve o projeto para persistir o anexo. Ao iniciar Play, todos os fontes de scripts/ são compilados novamente. **Abrir na IDE** prepara um projeto Gradle Java e abre o executável informado; **Pasta do projeto** abre o gerenciador de arquivos.
+
+Os scripts usam Java 17 e a API engine-core, sem classes JavaFX/libGDX/Android. No APK são compilados antecipadamente pelo build Android. Não há compilador Java no celular. Consulte [o guia de gameplay](docs/GAMEPLAY.md) para um exemplo de código e limitações.

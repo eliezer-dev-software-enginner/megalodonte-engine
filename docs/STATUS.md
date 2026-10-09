@@ -1,8 +1,8 @@
 # Estado
 
-Implementado: editor JSONC, projetos externos, salvamento por arquivo temporário e substituição, cenas e entrada, objetos, sprites, inspector, arraste, Play isolado, controle e colisão compartilhados, runtime e build Android debug em segundo plano pela UI, com log e publicação após sucesso.
+Implementado: editor JSONC, projetos externos, salvamento por arquivo temporário e substituição, cenas e entrada, objetos, sprites, inspector, arraste, Play isolado, controle e colisão compartilhados, runtime e build Android debug em segundo plano pela UI, com log e publicação após sucesso; mapas Tiled TMX/TMJ, câmera fixa/follow/zoom/fade, música por cena, ações HUD multitoque, scripts Java de objetos/HUD/cena com editor e compilação, abertura da pasta/IDE.
 
-Pendências explícitas: importador Nojo v2, câmera móvel/follow, ações/botões de HUD e estados dinâmicos, tilemaps TMX, scripts Java portáveis compilados antecipadamente no Android, áudio, animação, desfazer/refazer, autosave, gerenciamento de assets, progresso detalhado/cancelamento de build Android, release assinado/AAB, empacotamento desktop. Skins Scene2D ficam fora do escopo.
+Pendências explícitas: importador Nojo v2, animação, desfazer/refazer, autosave, gerenciamento de assets, progresso detalhado/cancelamento de build Android, release assinado/AAB, empacotamento desktop. Skins Scene2D ficam fora do escopo.
 
 Não existe paridade completa com o Nojo. O núcleo atual estabelece um jogo simples jogável nos dois destinos e pontos de extensão. Validação visual e em dispositivo deve ser registrada a cada incremento.
 
@@ -59,3 +59,9 @@ Entity.parentId default vazio mantém compatibilidade. Hierarchy compartilha com
 ## Persistência de metadados e identificação do projeto
 
 Salvar incorpora os campos do inspector de objeto/HUD, validando antes de gravar. lastEditedSceneId preserva a cena em edição; documentos antigos usam a cena inicial. Abrir também registra o caminho para a próxima sessão. O cabeçalho mostra o caminho completo de game.json em linha própria. Preferências ausentes deixam o projeto como não salvo, visível no cabeçalho; falhas de restauração continuam apresentadas na mensagem.
+
+## Gameplay — 09/10/2026
+
+Importação de mapas ortogonais finitos, tilesets TSX/TSJ e atlas/coleções de imagens; camadas CSV/XML/JSON/base64 zlib/gzip, flags de espelhamento e colisores retangulares. CameraView e TileDraw compartilham projeção e recorte entre desktop/Android. Música WAV/MP3 por cena e efeitos via scripts. Scripts Java 17 usam lifecycle e contexto portável; Play compila em segundo plano e Android compila fontes no APK. Editor de scripts preserva alterações ao trocar/fechar arquivo, mostra linha/coluna dos erros e gera projeto Gradle para IDE externa.
+
+Testes cobrem projeção/follow/clamp/fade, colisão de mapas, lifecycle/ações/transição de cena, importação e validação XML, compilação real de scripts, persistência e renderização das novas telas. O exemplo gerado reúne esses recursos e foi exportado para APK. Não havia dispositivo conectado para validar áudio/toque no hardware. Consulte GAMEPLAY.md para limites da importação e do editor de código.

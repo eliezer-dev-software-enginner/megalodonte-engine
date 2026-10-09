@@ -9,12 +9,17 @@ public final class Game {
     public static final class Scene {
         public String id = "scene-1", name = "Cena 1", background = "#172638";
         public double worldWidth = 16, worldHeight = 9;
+        public Camera camera = new Camera();
+        public String musicAssetPath = "", scriptClassName = "";
+        public double musicVolume = 0.7;
+        public boolean musicLoop = true;
+        public List<TileMap> tileMaps = new ArrayList<>();
         public List<Entity> objects = new ArrayList<>();
         public List<Hud> hud = new ArrayList<>();
     }
     public static final class Entity {
         public String id = UUID.randomUUID().toString(), name = "Objeto", color = "#56b6c2", assetPath = "";
-        public String parentId = "";
+        public String parentId = "", scriptClassName = "";
         public double x = 2, y = 2, width = 1, height = 1, speed = 4, rotation = 0;
         public boolean solid = true, player = false;
         public Entity copy() { return Codec.GSON.fromJson(Codec.GSON.toJson(this), Entity.class); }
@@ -23,8 +28,33 @@ public final class Game {
     public static final class Hud {
         public String id = UUID.randomUUID().toString(), type = "text", text = "Pontuação: 0";
         public String assetPath = "", color = "#ffffff", horizontalAnchor = "left", verticalAnchor = "top";
+        public String scriptClassName = "", action = "";
         public double offsetX = 24, offsetY = 24, width = 300, height = 48, fontSize = 32;
         public Hud copy() { return Codec.GSON.fromJson(Codec.GSON.toJson(this), Hud.class); }
+    }
+    public static final class Camera {
+        public String mode = "fixed", targetId = "";
+        public double x = 8, y = 4.5, width = 16, height = 9, zoom = 1;
+        public double followSpeed = 6, deadZoneWidth = 0, deadZoneHeight = 0, fadeSeconds = 0;
+        public boolean clampToWorld = true;
+        public Camera copy() { return Codec.GSON.fromJson(Codec.GSON.toJson(this),Camera.class); }
+    }
+    public static final class TileMap {
+        public String id = UUID.randomUUID().toString(), name = "Mapa";
+        public int columns, rows, tileWidth, tileHeight;
+        public double x, y, unitScale = 1;
+        public List<TileLayer> layers = new ArrayList<>();
+        public Map<Integer, Tile> tiles = new LinkedHashMap<>();
+        public List<Entity> obstacles = new ArrayList<>();
+    }
+    public static final class TileLayer {
+        public String name = "";
+        public long[] data;
+        public double offsetX, offsetY, opacity = 1;
+    }
+    public static final class Tile {
+        public String assetPath = "";
+        public int sourceX, sourceY, width, height;
     }
     public static Game demo() {
         Game game = new Game(); Scene scene = new Scene(); Entity player = new Entity();

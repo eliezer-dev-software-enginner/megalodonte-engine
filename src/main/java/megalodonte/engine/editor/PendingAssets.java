@@ -9,7 +9,9 @@ final class PendingAssets implements AutoCloseable {
     private final Map<String, Path> pending = new LinkedHashMap<>();
     String stage(Path source) throws IOException {
         String name = UUID.randomUUID()+"-"+source.getFileName();
-        Path temporary = Files.createTempFile("megalodonte-image-", ".tmp");
+        String filename = source.getFileName().toString();
+        String suffix = filename.contains(".") ? filename.substring(filename.lastIndexOf('.')) : ".tmp";
+        Path temporary = Files.createTempFile("megalodonte-asset-", suffix);
         try { Files.copy(source,temporary,StandardCopyOption.REPLACE_EXISTING); }
         catch(IOException e) { Files.deleteIfExists(temporary); throw e; }
         String asset="assets/"+name;pending.put(asset,temporary);return asset;

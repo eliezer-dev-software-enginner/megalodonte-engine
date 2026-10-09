@@ -3,47 +3,77 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.graphics.*;
 import android.view.*;
+import android.media.MediaPlayer;
 import megalodonte.engine.*;
 import java.util.*;
+
 public final class GameActivity extends Activity {
     private GameView view;
     @Override public void onCreate(Bundle state){super.onCreate(state);try{
         String json;try(var stream=getAssets().open("game.json")){json=new String(stream.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);}
         view=new GameView(Codec.read(json));setSafeContent(view);
     }catch(Exception e){android.widget.TextView error=new android.widget.TextView(this);error.setText("Falha ao carregar jogo: "+e.getMessage());setSafeContent(error);}}
-    /** Android 15 draws edge-to-edge; keep gameplay and HUD inside system insets. */
-    private void setSafeContent(View content) {
-        var host = new android.widget.FrameLayout(this);
-        host.setBackgroundColor(Color.BLACK);
-        host.addView(content, new android.widget.FrameLayout.LayoutParams(
-                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                android.view.ViewGroup.LayoutParams.MATCH_PARENT));
-        host.setOnApplyWindowInsetsListener((root, insets) -> {
-            var safe = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
-            root.setPadding(safe.left, safe.top, safe.right, safe.bottom);
-            return insets;
-        });
-        setContentView(host);
-        host.requestApplyInsets();
+    private void setSafeContent(View content){
+        var host=new android.widget.FrameLayout(this);host.setBackgroundColor(Color.BLACK);
+        host.addView(content,new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
+        host.setOnApplyWindowInsetsListener((root,insets)->{var safe=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());root.setPadding(safe.left,safe.top,safe.right,safe.bottom);return insets;});setContentView(host);host.requestApplyInsets();
     }
-    @Override protected void onPause(){super.onPause();if(view!=null){view.active=false;view.dx=view.dy=0;}}
-    @Override protected void onResume(){super.onResume();if(view!=null){view.active=true;view.last=0;view.postInvalidateOnAnimation();}}
+    @Override protected void onPause(){super.onPause();if(view!=null){view.active=false;view.clearInput();if(view.music!=null)view.music.pause();}}
+    @Override protected void onResume(){super.onResume();if(view!=null){view.active=true;view.last=0;if(view.music!=null)view.music.start();view.postInvalidateOnAnimation();}}
+    @Override protected void onDestroy(){if(view!=null)view.close();super.onDestroy();}
     private final class GameView extends View {
-        final megalodonte.engine.Runtime runtime;final Paint paint=new Paint();final Map<String,Bitmap> images=new HashMap<>();
+        final megalodonte.engine.Runtime runtime;
+        final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
+        final Map<String,Bitmap> images=new HashMap<>();
+        final Map<Integer,String> touchActions=new HashMap<>();
+        final Set<String> held=new HashSet<>();
+        final List<MediaPlayer> effects=new ArrayList<>();
+        MediaPlayer music;String musicScene="";
         boolean active=true;long last;double dx,dy;
-        GameView(Game game){super(GameActivity.this);runtime=new megalodonte.engine.Runtime(game);for(var e:runtime.scene.objects)if(!e.assetPath.isBlank())try(var stream=getAssets().open(e.assetPath)){images.put(e.assetPath,BitmapFactory.decodeStream(stream));}catch(Exception ignored){}
-            for(var h:runtime.scene.hud)if(!h.assetPath.isBlank())try(var stream=getAssets().open(h.assetPath)){images.put(h.assetPath,BitmapFactory.decodeStream(stream));}catch(Exception ignored){} }
-        @Override protected void onDraw(Canvas canvas){long now=System.nanoTime();runtime.update(last==0?0:(now-last)/1e9,dx,dy);last=now;var s=runtime.scene;
-            canvas.drawColor(Color.BLACK);float scale=(float)Math.min(getWidth()/s.worldWidth,getHeight()/s.worldHeight),ox=(float)(getWidth()-s.worldWidth*scale)/2,oy=(float)(getHeight()+s.worldHeight*scale)/2;
-            paint.setColor(Color.parseColor(s.background));canvas.drawRect(ox,oy-(float)s.worldHeight*scale,ox+(float)s.worldWidth*scale,oy,paint);
-            for(var e:s.objects){var pose=Hierarchy.pose(s,e);RectF rect=new RectF(ox+(float)pose.x()*scale,oy-(float)(pose.y()+e.height)*scale,ox+(float)(pose.x()+e.width)*scale,oy-(float)pose.y()*scale);canvas.save();canvas.rotate((float)(pose.rotation()%360),rect.centerX(),rect.centerY());Bitmap image=images.get(e.assetPath);if(image!=null)canvas.drawBitmap(image,null,rect,paint);else{paint.setColor(Color.parseColor(e.color));canvas.drawRect(rect,paint);}canvas.restore();}
-            for(var h:s.hud){var b=HudLayout.resolve(h,getWidth(),getHeight());canvas.save();canvas.clipRect((float)b.x(),(float)b.y(),(float)(b.x()+b.width()),(float)(b.y()+b.height()));
-                paint.setColor(Color.parseColor(h.color));paint.setAntiAlias(true);
-                if(h.type.equals("text")){paint.setTextSize((float)(h.fontSize*b.scale()));canvas.drawText(h.text,(float)b.x(),(float)b.y()-paint.getFontMetrics().top,paint);}
-                else{Bitmap image=images.get(h.assetPath);RectF rect=new RectF((float)b.x(),(float)b.y(),(float)(b.x()+b.width()),(float)(b.y()+b.height()));if(image!=null)canvas.drawBitmap(image,null,rect,paint);else canvas.drawRect(rect,paint);}
-                canvas.restore();}
-            if(active)postInvalidateOnAnimation();
+        GameView(Game game){super(GameActivity.this);
+            runtime=new megalodonte.engine.Runtime(game,megalodonte.engine.Runtime.reflection(getClass().getClassLoader()),new megalodonte.engine.Runtime.Events(){
+                public void log(String message){android.util.Log.i("MegalodonteScript",message);}
+                public void playSound(String asset){sound(asset);}
+            });
+            for(var scene:runtime.game.scenes){for(var e:scene.objects)loadImage(e.assetPath);for(var h:scene.hud)loadImage(h.assetPath);for(var map:scene.tileMaps)for(var tile:map.tiles.values())loadImage(tile.assetPath);}
         }
-        @Override public boolean onTouchEvent(MotionEvent event){if(event.getActionMasked()==MotionEvent.ACTION_UP||event.getActionMasked()==MotionEvent.ACTION_CANCEL){dx=dy=0;return true;}dx=event.getX()<getWidth()/3f?-1:event.getX()>getWidth()*2/3f?1:0;dy=event.getY()<getHeight()/3f?1:event.getY()>getHeight()*2/3f?-1:0;return true;}
+        void loadImage(String path){if(path.isBlank()||images.containsKey(path))return;try(var stream=getAssets().open(path)){Bitmap bitmap=BitmapFactory.decodeStream(stream);if(bitmap!=null)images.put(path,bitmap);}catch(Exception e){android.util.Log.w("Megalodonte",path,e);}}
+        MediaPlayer audio(String asset)throws Exception{MediaPlayer player=new MediaPlayer();try(var fd=getAssets().openFd(asset)){player.setDataSource(fd.getFileDescriptor(),fd.getStartOffset(),fd.getLength());player.prepare();}catch(Exception e){player.release();throw e;}return player;}
+        void sound(String asset){try{MediaPlayer player=audio(asset);effects.add(player);player.setOnCompletionListener(done->{effects.remove(done);done.release();});player.start();}catch(Exception e){android.util.Log.e("MegalodonteAudio",asset,e);}}
+        void updateMusic(){if(runtime.scene.id.equals(musicScene))return;if(music!=null){music.release();music=null;}musicScene=runtime.scene.id;
+            if(runtime.scene.musicAssetPath.isBlank())return;try{music=audio(runtime.scene.musicAssetPath);music.setLooping(runtime.scene.musicLoop);float volume=(float)runtime.scene.musicVolume;music.setVolume(volume,volume);music.start();}catch(Exception e){android.util.Log.e("MegalodonteAudio",runtime.scene.musicAssetPath,e);}}
+        @Override protected void onDraw(Canvas canvas){
+            if(!active)return;
+            long now=System.nanoTime();try{runtime.update(last==0?0:(now-last)/1e9,dx,dy);updateMusic();}catch(Exception e){active=false;clearInput();android.widget.Toast.makeText(GameActivity.this,"Erro no script: "+e.getMessage(),android.widget.Toast.LENGTH_LONG).show();return;}last=now;
+            var scene=runtime.scene;var view=CameraView.of(scene.camera,getWidth(),getHeight());float scale=(float)view.scale(),ox=(float)view.originX(),oy=(float)view.originY();
+            canvas.drawColor(Color.BLACK);canvas.save();canvas.clipRect((float)view.screenX(view.left()),(float)view.screenY(view.bottom()+view.height()),(float)view.screenX(view.left()+view.width()),(float)view.screenY(view.bottom()));paint.setColor(Color.parseColor(scene.background));paint.setAlpha(255);canvas.drawRect(ox,oy-(float)scene.worldHeight*scale,ox+(float)scene.worldWidth*scale,oy,paint);
+            TileDraw.render(scene,view,(tile,x,y,w,h,alpha,a,b,c,d)->{Bitmap image=images.get(tile.assetPath);if(image==null)return;canvas.save();canvas.translate((float)(x+w/2),(float)(y+h/2));canvas.scale((float)w,(float)h);Matrix matrix=new Matrix();matrix.setValues(new float[]{(float)a,(float)c,0,(float)b,(float)d,0,0,0,1});canvas.concat(matrix);paint.setAlpha((int)(alpha*255));canvas.drawBitmap(image,new Rect(tile.sourceX,tile.sourceY,tile.sourceX+tile.width,tile.sourceY+tile.height),new RectF(-.5f,-.5f,.5f,.5f),paint);canvas.restore();});paint.setAlpha(255);
+            for(var e:scene.objects){var pose=Hierarchy.pose(scene,e);RectF rect=new RectF(ox+(float)pose.x()*scale,oy-(float)(pose.y()+e.height)*scale,ox+(float)(pose.x()+e.width)*scale,oy-(float)pose.y()*scale);canvas.save();canvas.rotate((float)(pose.rotation()%360),rect.centerX(),rect.centerY());Bitmap image=images.get(e.assetPath);if(image!=null)canvas.drawBitmap(image,null,rect,paint);else{paint.setColor(Color.parseColor(e.color));canvas.drawRect(rect,paint);}canvas.restore();}
+            canvas.restore();
+            for(var hud:scene.hud){var b=HudLayout.resolve(hud,getWidth(),getHeight());canvas.save();canvas.clipRect((float)b.x(),(float)b.y(),(float)(b.x()+b.width()),(float)(b.y()+b.height()));
+                RectF rect=new RectF((float)b.x(),(float)b.y(),(float)(b.x()+b.width()),(float)(b.y()+b.height()));
+                if(hud.type.equals("button")){paint.setColor(Color.rgb(36,88,120));canvas.drawRoundRect(rect,8,8,paint);}
+                paint.setColor(Color.parseColor(hud.color));
+                if(hud.type.equals("text")||hud.type.equals("button")){paint.setTextSize((float)(hud.fontSize*b.scale()));canvas.drawText(hud.text,(float)b.x(),(float)b.y()-paint.getFontMetrics().top,paint);}
+                else{Bitmap image=images.get(hud.assetPath);if(image!=null)canvas.drawBitmap(image,null,rect,paint);else canvas.drawRect(rect,paint);}canvas.restore();
+            }
+            if(runtime.fadeAlpha()>0){paint.setColor(Color.argb((int)(runtime.fadeAlpha()*255),0,0,0));canvas.drawRect(0,0,getWidth(),getHeight(),paint);}
+            postInvalidateOnAnimation();
+        }
+        @Override public boolean onTouchEvent(MotionEvent event){
+            if(event.getActionMasked()==MotionEvent.ACTION_CANCEL){clearInput();return true;}
+            if(event.getActionMasked()==MotionEvent.ACTION_DOWN||event.getActionMasked()==MotionEvent.ACTION_POINTER_DOWN){int i=event.getActionIndex();String action="";
+                for(int j=runtime.scene.hud.size()-1;j>=0;j--){var h=runtime.scene.hud.get(j);if(h.type.equals("button")&&HudLayout.resolve(h,getWidth(),getHeight()).contains(event.getX(i),event.getY(i))){action=h.action.isBlank()?h.id:h.action;break;}}
+                touchActions.put(event.getPointerId(i),action);
+            }
+            int up=(event.getActionMasked()==MotionEvent.ACTION_UP||event.getActionMasked()==MotionEvent.ACTION_POINTER_UP)?event.getActionIndex():-1;
+            if(up>=0)touchActions.remove(event.getPointerId(up));
+            Set<String> next=new HashSet<>(touchActions.values());next.remove("");for(String action:held)if(!next.contains(action))runtime.setAction(action,false);for(String action:next)runtime.setAction(action,true);held.clear();held.addAll(next);
+            dx=dy=0;
+            for(int i=0;i<event.getPointerCount();i++)if(i!=up&&"".equals(touchActions.get(event.getPointerId(i)))){dx=event.getX(i)<getWidth()/3f?-1:event.getX(i)>getWidth()*2/3f?1:0;dy=event.getY(i)<getHeight()/3f?1:event.getY(i)>getHeight()*2/3f?-1:0;break;}
+            return true;
+        }
+        void clearInput(){for(String action:held)runtime.setAction(action,false);held.clear();touchActions.clear();dx=dy=0;}
+        void close(){active=false;runtime.close();if(music!=null){music.release();music=null;}for(var effect:effects)effect.release();effects.clear();for(var image:images.values())image.recycle();images.clear();}
     }
 }

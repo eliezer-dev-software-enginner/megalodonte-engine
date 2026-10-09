@@ -93,6 +93,98 @@
     "projectPath": {
       "type": "string",
       "initial": "Projeto: ainda não salvo"
+    },
+    "sceneWidth": {
+      "type": "string",
+      "initial": "16"
+    },
+    "sceneHeight": {
+      "type": "string",
+      "initial": "9"
+    },
+    "cameraX": {
+      "type": "string",
+      "initial": "8"
+    },
+    "cameraY": {
+      "type": "string",
+      "initial": "4.5"
+    },
+    "cameraWidth": {
+      "type": "string",
+      "initial": "16"
+    },
+    "cameraHeight": {
+      "type": "string",
+      "initial": "9"
+    },
+    "cameraZoom": {
+      "type": "string",
+      "initial": "1"
+    },
+    "cameraSpeed": {
+      "type": "string",
+      "initial": "6"
+    },
+    "cameraFade": {
+      "type": "string",
+      "initial": "0"
+    },
+    "cameraDeadX": {
+      "type": "string",
+      "initial": "0"
+    },
+    "cameraDeadY": {
+      "type": "string",
+      "initial": "0"
+    },
+    "musicVolume": {
+      "type": "string",
+      "initial": "0.7"
+    },
+    "cameraMode": {
+      "type": "string",
+      "initial": ""
+    },
+    "musicPath": {
+      "type": "string",
+      "initial": ""
+    },
+    "sceneScript": {
+      "type": "string",
+      "initial": ""
+    },
+    "objectScript": {
+      "type": "string",
+      "initial": ""
+    },
+    "hudScript": {
+      "type": "string",
+      "initial": ""
+    },
+    "hudAction": {
+      "type": "string",
+      "initial": ""
+    },
+    "mapX": {
+      "type": "string",
+      "initial": "0"
+    },
+    "mapY": {
+      "type": "string",
+      "initial": "0"
+    },
+    "mapScale": {
+      "type": "string",
+      "initial": "1"
+    },
+    "sceneSettings": {
+      "type": "boolean",
+      "initial": false
+    },
+    "mapSelected": {
+      "type": "boolean",
+      "initial": false
     }
   },
   "view": {
@@ -268,6 +360,84 @@
         ]
       },
       {
+        "type": "Row",
+        "props": {
+          "spacing": 8
+        },
+        "children": [
+          {
+            "type": "Button",
+            "props": {
+              "text": "Mapa Tiled",
+              "height": 30
+            },
+            "events": {
+              "onClick": "importTileMap"
+            }
+          },
+          {
+            "type": "Button",
+            "props": {
+              "text": "Música",
+              "height": 30
+            },
+            "events": {
+              "onClick": "importMusic"
+            }
+          },
+          {
+            "type": "Button",
+            "props": {
+              "text": "Cena / câmera",
+              "height": 30
+            },
+            "events": {
+              "onClick": "toggleSceneSettings"
+            }
+          },
+          {
+            "type": "Button",
+            "props": {
+              "text": "Scripts Java",
+              "height": 30
+            },
+            "events": {
+              "onClick": "editScripts"
+            }
+          },
+          {
+            "type": "Button",
+            "props": {
+              "text": "HUD: botão",
+              "height": 30
+            },
+            "events": {
+              "onClick": "addHudButton"
+            }
+          },
+          {
+            "type": "Button",
+            "props": {
+              "text": "Abrir pasta",
+              "height": 30
+            },
+            "events": {
+              "onClick": "openProjectFolder"
+            }
+          },
+          {
+            "type": "Button",
+            "props": {
+              "text": "Abrir IDE",
+              "height": 30
+            },
+            "events": {
+              "onClick": "openProjectIde"
+            }
+          }
+        ]
+      },
+      {
         "type": "Text",
         "bind": {
           "text": "project"
@@ -344,6 +514,382 @@
                     "props": {
                       "text": "INSPECTOR"
                     }
+                  },
+                  {
+                    "type": "Column",
+                    "bind": {
+                      "visible": "sceneSettings"
+                    },
+                    "props": {
+                      "spacing": 4
+                    },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "CENA / CÂMERA"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "bind": {
+                          "text": "cameraMode"
+                        },
+                        "props": {
+                          "wrapWidth": 190
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Largura do mundo"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "sceneWidth"
+                        },
+                        "props": {
+                          "height": 30
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Altura do mundo"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "sceneHeight"
+                        },
+                        "props": {
+                          "height": 30
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Centro X"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "cameraX"
+                        },
+                        "props": {
+                          "height": 30
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Centro Y"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "cameraY"
+                        },
+                        "props": {
+                          "height": 30
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Largura visível"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "cameraWidth"
+                        },
+                        "props": {
+                          "height": 30
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Altura visível"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "cameraHeight"
+                        },
+                        "props": {
+                          "height": 30
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Zoom"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "cameraZoom"
+                        },
+                        "props": {
+                          "height": 30
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Suavização (0 = instantânea)"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "cameraSpeed"
+                        },
+                        "props": {
+                          "height": 30
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Zona morta X"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "cameraDeadX"
+                        },
+                        "props": {
+                          "height": 30
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Zona morta Y"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "cameraDeadY"
+                        },
+                        "props": {
+                          "height": 30
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Fade inicial (segundos)"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "cameraFade"
+                        },
+                        "props": {
+                          "height": 30
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Volume (0 a 1)"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "musicVolume"
+                        },
+                        "props": {
+                          "height": 30
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Aplicar cena",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "applyScene"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Seguir objeto selecionado",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "followSelected"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Câmera fixa",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "fixedCamera"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Alternar limite do mundo",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "toggleCameraClamp"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "bind": {
+                          "text": "musicPath"
+                        },
+                        "props": {
+                          "wrapWidth": 190
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Repetir música: alternar",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "toggleMusicLoop"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Remover música",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "removeMusic"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "bind": {
+                          "text": "sceneScript"
+                        },
+                        "props": {
+                          "wrapWidth": 190
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Script da cena",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "editSceneScript"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Column",
+                    "bind": {
+                      "visible": "mapSelected"
+                    },
+                    "props": {
+                      "spacing": 4
+                    },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "MAPA"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "X"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "mapX"
+                        },
+                        "props": {
+                          "height": 30
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Y"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "mapY"
+                        },
+                        "props": {
+                          "height": 30
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Unidades por pixel"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "mapScale"
+                        },
+                        "props": {
+                          "height": 30
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Aplicar mapa",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "applyMap"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Remover mapa",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "removeMap"
+                        }
+                      }
+                    ]
                   },
                   {
                     "type": "Column",
@@ -524,6 +1070,40 @@
                         },
                         "events": {
                           "onClick": "importHudImage"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Ação do botão HUD"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "hudAction"
+                        },
+                        "props": {
+                          "height": 30
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "bind": {
+                          "text": "hudScript"
+                        },
+                        "props": {
+                          "wrapWidth": 190
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Editar / anexar script",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "editScripts"
                         }
                       }
                     ]
@@ -754,6 +1334,25 @@
                         },
                         "events": {
                           "onClick": "detachParent"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "bind": {
+                          "text": "objectScript"
+                        },
+                        "props": {
+                          "wrapWidth": 190
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Editar / anexar script",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "editScripts"
                         }
                       }
                     ]
