@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "name": "Demo",
+  "entrySceneId": "scene-1",
+  "scenes": [
+    {
+      "id": "scene-1",
+      "name": "Cena 1",
+      "background": "#172638",
+      "worldWidth": 16,
+      "worldHeight": 9,
+      "objects": [
+        {
+          "id": "player",
+          "name": "Jogador",
+          "x": 2,
+          "y": 2,
+          "width": 1,
+          "height": 1,
+          "speed": 4,
+          "player": true,
+          "solid": true,
+          "color": "#56b6c2",
+          "assetPath": ""
+        }
+      ]
+    }
+  ]
+}

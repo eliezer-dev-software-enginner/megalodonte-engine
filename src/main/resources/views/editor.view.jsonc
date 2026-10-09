@@ -1,0 +1,699 @@
+{
+  "version": 1,
+  "id": "editor",
+  "states": {
+    "project": {
+      "type": "string",
+      "initial": ""
+    },
+    "mensagem": {
+      "type": "string",
+      "initial": ""
+    },
+    "name": {
+      "type": "string",
+      "initial": ""
+    },
+    "x": {
+      "type": "string",
+      "initial": ""
+    },
+    "y": {
+      "type": "string",
+      "initial": ""
+    },
+    "width": {
+      "type": "string",
+      "initial": ""
+    },
+    "height": {
+      "type": "string",
+      "initial": ""
+    },
+    "color": {
+      "type": "string",
+      "initial": ""
+    },
+    "speed": {
+      "type": "string",
+      "initial": ""
+    },
+    "hudId": {
+      "type": "string",
+      "initial": ""
+    },
+    "hudText": {
+      "type": "string",
+      "initial": ""
+    },
+    "hudX": {
+      "type": "string",
+      "initial": ""
+    },
+    "hudY": {
+      "type": "string",
+      "initial": ""
+    },
+    "hudWidth": {
+      "type": "string",
+      "initial": ""
+    },
+    "hudHeight": {
+      "type": "string",
+      "initial": ""
+    },
+    "hudFont": {
+      "type": "string",
+      "initial": ""
+    },
+    "hudColor": {
+      "type": "string",
+      "initial": ""
+    },
+    "hudAnchors": {
+      "type": "string",
+      "initial": ""
+    },
+    "hudSelected": {
+      "type": "boolean",
+      "initial": false
+    },
+    "worldSelected": {
+      "type": "boolean",
+      "initial": true
+    }
+  },
+  "view": {
+    "type": "Column",
+    "props": {
+      "padding": 18,
+      "spacing": 12,
+      "fillHeight": true,
+      "fillWidth": true
+    },
+    "children": [
+      {
+        "type": "Text",
+        "props": {
+          "text": "MEGALODONTE • ENGINE 2D"
+        }
+      },
+      {
+        "type": "Row",
+        "props": {
+          "spacing": 8
+        },
+        "children": [
+          {
+            "type": "Button",
+            "props": {
+              "text": "Novo",
+              "height": 36
+            },
+            "events": {
+              "onClick": "newProject"
+            },
+            "id": "toolbar0Button0"
+          },
+          {
+            "type": "Button",
+            "props": {
+              "text": "Abrir",
+              "height": 36
+            },
+            "events": {
+              "onClick": "openProject"
+            },
+            "id": "toolbar0Button1"
+          },
+          {
+            "type": "Button",
+            "props": {
+              "text": "Salvar",
+              "height": 36
+            },
+            "events": {
+              "onClick": "saveProject"
+            },
+            "id": "toolbar0Button2"
+          },
+          {
+            "type": "Button",
+            "props": {
+              "text": "Nova cena",
+              "height": 36
+            },
+            "events": {
+              "onClick": "addScene"
+            },
+            "id": "toolbar0Button3"
+          },
+          {
+            "type": "Button",
+            "props": {
+              "text": "Próxima cena",
+              "height": 36
+            },
+            "events": {
+              "onClick": "nextScene"
+            },
+            "id": "toolbar0Button4"
+          },
+          {
+            "type": "Button",
+            "props": {
+              "text": "Cena inicial",
+              "height": 36
+            },
+            "events": {
+              "onClick": "setEntry"
+            },
+            "id": "toolbar0Button5"
+          }
+        ]
+      },
+      {
+        "type": "Row",
+        "props": {
+          "spacing": 8
+        },
+        "children": [
+          {
+            "type": "Button",
+            "props": {
+              "text": "Objeto",
+              "height": 36
+            },
+            "events": {
+              "onClick": "addObject"
+            },
+            "id": "toolbar1Button0"
+          },
+          {
+            "type": "Button",
+            "props": {
+              "text": "Excluir",
+              "height": 36
+            },
+            "events": {
+              "onClick": "deleteObject"
+            },
+            "id": "toolbar1Button1"
+          },
+          {
+            "type": "Button",
+            "props": {
+              "text": "Sprite",
+              "height": 36
+            },
+            "events": {
+              "onClick": "importSprite"
+            },
+            "id": "toolbar1Button2"
+          },
+          {
+            "type": "Button",
+            "props": {
+              "text": "Play / Stop",
+              "height": 36
+            },
+            "events": {
+              "onClick": "togglePlay"
+            },
+            "id": "toolbar1Button3"
+          },
+          {
+            "type": "Button",
+            "props": {
+              "text": "Exportar Android",
+              "height": 36
+            },
+            "events": {
+              "onClick": "exportAndroid"
+            },
+            "id": "toolbar1Button4"
+          },
+          {
+            "type": "Button",
+            "props": {
+              "text": "HUD: texto",
+              "height": 32
+            },
+            "events": {
+              "onClick": "addHudText"
+            }
+          },
+          {
+            "type": "Button",
+            "props": {
+              "text": "HUD: imagem",
+              "height": 32
+            },
+            "events": {
+              "onClick": "addHudImage"
+            }
+          }
+        ]
+      },
+      {
+        "type": "Text",
+        "bind": {
+          "text": "project"
+        }
+      },
+      {
+        "type": "Row",
+        "props": {
+          "spacing": 12,
+          "fillHeight": true,
+          "fillWidth": true
+        },
+        "children": [
+          {
+            "type": "Column",
+            "props": {
+              "width": 200,
+              "spacing": 10
+            },
+            "children": [
+              {
+                "type": "Text",
+                "props": {
+                  "text": "OBJETOS"
+                }
+              },
+              {
+                "type": "Container",
+                "id": "tree",
+                "props": {
+                  "fillHeight": true
+                }
+              }
+            ]
+          },
+          {
+            "type": "Container",
+            "id": "viewport",
+            "props": {
+              "fillHeight": true,
+              "fillWidth": true
+            }
+          },
+          {
+            "type": "Scroll",
+            "id": "inspectorScroll",
+            "props": {
+              "width": 220,
+              "fillHeight": true
+            },
+            "children": [
+              {
+                "type": "Column",
+                "props": {
+                  "width": 210,
+                  "spacing": 4
+                },
+                "children": [
+                  {
+                    "type": "Text",
+                    "props": {
+                      "text": "INSPECTOR"
+                    }
+                  },
+                  {
+                    "type": "Column",
+                    "bind": {
+                      "visible": "hudSelected"
+                    },
+                    "props": {
+                      "spacing": 4
+                    },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "HUD • unidades de referência"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Identificador"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "hudId"
+                        },
+                        "props": {
+                          "height": 32
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Texto"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "hudText"
+                        },
+                        "props": {
+                          "height": 32
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Offset X"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "hudX"
+                        },
+                        "props": {
+                          "height": 32
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Offset Y"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "hudY"
+                        },
+                        "props": {
+                          "height": 32
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Largura"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "hudWidth"
+                        },
+                        "props": {
+                          "height": 32
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Altura"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "hudHeight"
+                        },
+                        "props": {
+                          "height": 32
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Fonte"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "hudFont"
+                        },
+                        "props": {
+                          "height": 32
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Cor (#RRGGBB)"
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "hudColor"
+                        },
+                        "props": {
+                          "height": 32
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "bind": {
+                          "text": "hudAnchors"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Âncora horizontal",
+                          "height": 32
+                        },
+                        "events": {
+                          "onClick": "cycleHudHorizontal"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Âncora vertical",
+                          "height": 32
+                        },
+                        "events": {
+                          "onClick": "cycleHudVertical"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Aplicar HUD",
+                          "height": 32
+                        },
+                        "events": {
+                          "onClick": "applyHud"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Trocar imagem HUD",
+                          "height": 32
+                        },
+                        "events": {
+                          "onClick": "importHudImage"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Column",
+                    "bind": {
+                      "visible": "worldSelected"
+                    },
+                    "props": {
+                      "spacing": 4
+                    },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Nome"
+                        },
+                        "style": {
+                          "fontSize": 11
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "name"
+                        },
+                        "props": {
+                          "placeholder": "name"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Posição X"
+                        },
+                        "style": {
+                          "fontSize": 11
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "x"
+                        },
+                        "props": {
+                          "placeholder": "x"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Posição Y"
+                        },
+                        "style": {
+                          "fontSize": 11
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "y"
+                        },
+                        "props": {
+                          "placeholder": "y"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Largura"
+                        },
+                        "style": {
+                          "fontSize": 11
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "width"
+                        },
+                        "props": {
+                          "placeholder": "width"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Altura"
+                        },
+                        "style": {
+                          "fontSize": 11
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "height"
+                        },
+                        "props": {
+                          "placeholder": "height"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Cor (#RRGGBB)"
+                        },
+                        "style": {
+                          "fontSize": 11
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "color"
+                        },
+                        "props": {
+                          "placeholder": "color"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Velocidade"
+                        },
+                        "style": {
+                          "fontSize": 11
+                        }
+                      },
+                      {
+                        "type": "Input",
+                        "bind": {
+                          "value": "speed"
+                        },
+                        "props": {
+                          "placeholder": "speed"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Aplicar",
+                          "height": 36
+                        },
+                        "events": {
+                          "onClick": "applyObject"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Controlável: alternar",
+                          "height": 36
+                        },
+                        "events": {
+                          "onClick": "togglePlayer"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Colisor: alternar",
+                          "height": 36
+                        },
+                        "events": {
+                          "onClick": "toggleSolid"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "WASD / setas no Play"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "props": {
+                          "text": "Arraste objetos na cena"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Text",
+        "bind": {
+          "text": "mensagem"
+        }
+      }
+    ]
+  }
+}
