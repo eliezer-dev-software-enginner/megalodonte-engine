@@ -5,6 +5,7 @@ public final class Game {
     public int version = 1;
     public String name = "Meu jogo", entrySceneId = "scene-1";
     public String lastEditedSceneId = "";
+    public String iconAssetPath = "";
     public String applicationId = "megalodonte.engine.game";
     public List<Scene> scenes = new ArrayList<>();
     public static final class Scene {

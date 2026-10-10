@@ -9,6 +9,8 @@ public final class Codec {
     public static void validate(Game game) {
         if (game == null || game.version != 1 || game.scenes == null || game.scenes.isEmpty()) throw new IllegalArgumentException("Documento de jogo inválido ou versão incompatível");
         if(game.applicationId==null||!game.applicationId.matches("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+"))throw new IllegalArgumentException("applicationId inválido");
+        validateAsset(game.iconAssetPath);
+        if(!game.iconAssetPath.isBlank()&&!game.iconAssetPath.toLowerCase(java.util.Locale.ROOT).endsWith(".png"))throw new IllegalArgumentException("Ícone deve ser uma imagem PNG");
         Set<String> scenes = new HashSet<>();
         for (Game.Scene scene : game.scenes) {
             if (scene == null || scene.id == null || scene.id.isBlank() || !scenes.add(scene.id) || scene.objects == null || !positive(scene.worldWidth) || !positive(scene.worldHeight)) throw new IllegalArgumentException("Cena inválida");

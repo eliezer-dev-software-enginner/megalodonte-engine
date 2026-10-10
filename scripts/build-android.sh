@@ -16,9 +16,17 @@ import json,sys
 with open(sys.argv[1]) as f: game=json.load(f)
 print(game.get("applicationId","megalodonte.engine.game"))
 print(game.get("name","Megalodonte Game").replace("\n"," ").replace("\r"," "))
+icon=game.get("iconAssetPath", "")
+if icon:
+    from pathlib import Path
+    root=Path(sys.argv[1]).parent.resolve()
+    target=(root/icon).resolve()
+    if not target.is_relative_to(root) or not target.is_file() or target.suffix.lower()!=".png": raise SystemExit("Ícone PNG inválido: "+icon)
+    print(target)
+else: print("")
 META
 )
-bash "$engine_dir/android/gradlew" -p "$engine_dir/android" :app:assembleDebug -PgameAssets="$staging_dir/game" -PgameScripts="$staging_dir/scripts" -PgameApplicationId="${metadata[0]}" -PgameName="${metadata[1]}"
+bash "$engine_dir/android/gradlew" -p "$engine_dir/android" :app:assembleDebug -PgameAssets="$staging_dir/game" -PgameScripts="$staging_dir/scripts" -PgameApplicationId="${metadata[0]}" -PgameName="${metadata[1]}" -PgameIcon="${metadata[2]}"
 mkdir -p "$game_dir/build/android"
 cp "$engine_dir/android/app/build/outputs/apk/debug/app-debug.apk" "$game_dir/build/android/game-debug.apk.tmp"
 mv "$game_dir/build/android/game-debug.apk.tmp" "$game_dir/build/android/game-debug.apk"

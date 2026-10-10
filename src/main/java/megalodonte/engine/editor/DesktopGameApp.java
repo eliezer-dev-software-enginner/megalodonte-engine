@@ -40,7 +40,7 @@ public final class DesktopGameApp extends Application {
             public void muteAudio(boolean value){audio.mute(value);}
         });
         var canvas=new Canvas();var root=new StackPane(canvas);canvas.widthProperty().bind(root.widthProperty());canvas.heightProperty().bind(root.heightProperty());
-        var scene=new Scene(root,1100,720);stage.setScene(scene);stage.setTitle(game.name);stage.setMinWidth(640);stage.setMinHeight(420);
+        var scene=new Scene(root,1100,720);stage.setScene(scene);stage.setTitle(game.name);if(!game.iconAssetPath.isBlank())stage.getIcons().add(new Image(project.resolve(game.iconAssetPath).toUri().toString()));stage.setMinWidth(640);stage.setMinHeight(420);
         scene.setOnKeyPressed(e->{keys.add(e.getCode());runtime.setAction(e.getCode().name().toLowerCase(Locale.ROOT),true);if(e.getCode()==KeyCode.F11)stage.setFullScreen(!stage.isFullScreen());e.consume();});
         scene.setOnKeyReleased(e->{keys.remove(e.getCode());runtime.setAction(e.getCode().name().toLowerCase(Locale.ROOT),false);e.consume();});
         canvas.setOnMousePressed(e->{if(e.getButton()!=javafx.scene.input.MouseButton.PRIMARY)return;for(int i=runtime.scene.hud.size()-1;i>=0;i--){var hud=runtime.scene.hud.get(i);if(hud.visible&&hud.type.equals("button")&&HudLayout.resolve(hud,canvas.getWidth(),canvas.getHeight()).contains(e.getX(),e.getY())){String action=hud.action.isBlank()?hud.id:hud.action;runtime.setAction(action,true);mouseActions.add(action);break;}}});
