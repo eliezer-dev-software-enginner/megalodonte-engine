@@ -17,6 +17,7 @@ final class RecentProject {
         RecentProject project=userPreference();
         return new RecentProject(project.preference.resolveSibling("last-image-directory.txt"));
     }
+    static RecentProject assetDirectoryPreference(){var project=userPreference();return new RecentProject(project.preference.resolveSibling("last-asset-directory.txt"));}
     Path lastSaved() throws IOException {
         if (!Files.exists(preference)) return null;
         String value = Files.readString(preference).strip();

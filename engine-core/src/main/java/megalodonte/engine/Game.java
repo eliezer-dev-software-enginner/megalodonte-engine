@@ -39,6 +39,7 @@ public final class Game {
     public static final class Hud {
         public String id = UUID.randomUUID().toString(), type = "text", text = "Pontuação: 0";
         public String assetPath = "", color = "#ffffff", horizontalAnchor = "left", verticalAnchor = "top";
+        public String referenceArea = "viewport";
         public String scriptClassName = "", action = "";
         public boolean visible = true;
         public double offsetX = 24, offsetY = 24, width = 300, height = 48, fontSize = 32;

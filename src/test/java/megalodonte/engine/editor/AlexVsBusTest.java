@@ -16,6 +16,12 @@ class AlexVsBusTest {
     }
     private void asset(String path){if(!path.isBlank())assertTrue(Files.isRegularFile(project.resolve(path)),path);}
     private void press(megalodonte.engine.Runtime r,String action){r.setAction(action,true);r.update(.01,0,0);r.setAction(action,false);r.update(.01,0,0);}
+    @Test void menuAnchorsMatchVisualPlacement(){
+        var back=game.scenes.stream().filter(scene->scene.id.equals("menu-settings")).findFirst().orElseThrow().hud.stream().filter(h->h.id.equals("settings-back")).findFirst().orElseThrow();
+        assertEquals("left",back.horizontalAnchor);assertEquals("top",back.verticalAnchor);assertEquals("content",back.referenceArea);
+        var audio=game.scenes.get(0).hud.stream().filter(h->h.id.equals("audio")).findFirst().orElseThrow();assertEquals("right",audio.horizontalAnchor);assertEquals("top",audio.verticalAnchor);
+        for(var scene:game.scenes)if(scene.id.startsWith("menu"))assertTrue(scene.hud.stream().allMatch(h->h.referenceArea.equals("content")));
+    }
     @Test void everySubmenuIsVisibleAndEditableWithoutScripts(){
         for(String page:new String[]{"difficulty","levels","settings","display","sound","vscreen","jukebox","about","credits","quit"}){
             var scene=game.scenes.stream().filter(s->s.id.equals("menu-"+page)).findFirst().orElseThrow();assertFalse(scene.hud.isEmpty());assertTrue(scene.hud.stream().allMatch(h->h.visible));assertTrue(scene.hud.stream().allMatch(h->h.id.startsWith(page+"-")));

@@ -6,4 +6,13 @@ class HudTest {
     @Test void dragRoundTripsAllAnchors(){for(String x:new String[]{"left","center","right"})for(String y:new String[]{"top","center","bottom"}){var h=new Game.Hud();h.horizontalAnchor=x;h.verticalAnchor=y;HudLayout.position(h,120,85,800,400);var b=HudLayout.resolve(h,800,400);assertEquals(120,b.x(),1e-8);assertEquals(85,b.y(),1e-8);}}
     @Test void oldDocumentsAndSceneIsolation(){Game game=Codec.read("{\"version\":1,\"entrySceneId\":\"scene-1\",\"scenes\":[{\"id\":\"scene-1\"}]}");assertTrue(game.scenes.get(0).hud.isEmpty());game.scenes.get(0).hud.add(new Game.Hud());Game copy=Codec.copy(game);copy.scenes.get(0).hud.get(0).text="Outro";assertEquals("Pontuação: 0",game.scenes.get(0).hud.get(0).text);}
     @Test void invalidHudRejected(){Game game=Game.demo();var h=new Game.Hud();game.scenes.get(0).hud.add(h);h.width=-1;assertThrows(IllegalArgumentException.class,()->Codec.validate(game));h.width=300;h.assetPath="../secret";assertThrows(IllegalArgumentException.class,()->Codec.validate(game));}
+    @Test void contentAnchorsFollowCenteredAreaOnWideAndTallScreens(){
+        var back=new Game.Hud();back.referenceArea="content";back.width=back.height=100;back.offsetX=back.offsetY=20;
+        var wide=HudLayout.resolve(back,2000,720);assertEquals(380,wide.x());assertEquals(20,wide.y());
+        var tall=HudLayout.resolve(back,1280,1000);assertEquals(20,tall.x());assertEquals(160,tall.y());
+        back.horizontalAnchor="right";var volume=HudLayout.resolve(back,2000,720);assertEquals(1520,volume.x());assertEquals(20,volume.y());
+    }
+    @Test void contentDraggingRoundTripsEveryAnchor(){for(String x:new String[]{"left","center","right"})for(String y:new String[]{"top","center","bottom"}){
+        var h=new Game.Hud();h.referenceArea="content";h.horizontalAnchor=x;h.verticalAnchor=y;HudLayout.position(h,420,85,2000,720);var box=HudLayout.resolve(h,2000,720);assertEquals(420,box.x(),1e-8);assertEquals(85,box.y(),1e-8);
+    }}
 }

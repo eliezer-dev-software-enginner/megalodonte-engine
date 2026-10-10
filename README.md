@@ -73,3 +73,5 @@ Exportar Desktop cria o jogador independente com Java/JavaFX; Exportar Android u
 Exportações bem-sucedidas pelo terminal também registram o projeto como o último usado pelo editor. Para registrar um projeto criado externamente sem exportar, execute `bash scripts/remember-project.sh /pasta/do/jogo`. A preferência fica em `~/.config/megalodonte-engine/last-saved-project.txt`; o helper aceita `ENGINE_PREFERENCES_FILE` para testes/ambientes isolados.
 
 A lista **CENAS**, no canto superior direito, permite abrir qualquer cena diretamente. Ela destaca a cena selecionada e identifica a cena inicial; abrir/criar projetos, adicionar cenas e usar Próxima cena mantém a lista sincronizada. Trocar de cena aplica os campos válidos do inspetor antes de mudar a seleção.
+
+A cobertura dos recursos do runtime pela interface e os fluxos de animação/mapas estão em [Recursos do editor](docs/EDITOR_FEATURES.md).

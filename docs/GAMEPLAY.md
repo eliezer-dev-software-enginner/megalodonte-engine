@@ -103,3 +103,7 @@ Entity possui `animations` (nome → frames de assets, fps e loop), `animation`,
 A adaptação Alex vs Bus em `../../games/alex-vs-bus` usa essas APIs, 13 fases originais, câmera, tilemaps, áudio, HUD e scripts nos dois hosts. Consulte também [exportação Desktop](DESKTOP_EXPORT.md).
 
 `context.quit()` solicita sair ao host (fecha o aplicativo no Desktop/Android; encerra Play no editor). Botões com `assetPath` desenham o PNG do projeto e mantêm sua ação; os menus podem alterar `visible` e `assetPath` em execução. Mudanças de `musicAssetPath` dentro da mesma cena também trocam a música nos dois hosts.
+
+## Âncoras da HUD
+
+`referenceArea` escolhe a base das âncoras: `viewport` (padrão compatível, tela segura após insets) ou `content` (área 1280×720 ajustada e centralizada). `left/top` mede a margem da esquerda/topo dessa área; `right/bottom` mede a margem da direita/base; `center` mede o deslocamento a partir do centro. Menus usam conteúdo; controles nas bordas da tela usam viewport. No inspetor, Área da HUD alterna a referência. Mudar a referência ou a âncora preserva a posição visual e recalcula os offsets; arrastar usa a mesma transformação nos hosts Desktop/Android.

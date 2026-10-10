@@ -11,13 +11,14 @@ public final class Codec {
         if(game.applicationId==null||!game.applicationId.matches("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+"))throw new IllegalArgumentException("applicationId inválido");
         Set<String> scenes = new HashSet<>();
         for (Game.Scene scene : game.scenes) {
-            if (scene == null || scene.id == null || !scenes.add(scene.id) || scene.objects == null || !positive(scene.worldWidth) || !positive(scene.worldHeight)) throw new IllegalArgumentException("Cena inválida");
+            if (scene == null || scene.id == null || scene.id.isBlank() || !scenes.add(scene.id) || scene.objects == null || !positive(scene.worldWidth) || !positive(scene.worldHeight)) throw new IllegalArgumentException("Cena inválida");
             validateSceneFeatures(scene);
             if(scene.hud == null) throw new IllegalArgumentException("HUD inválida");
             Set<String> hudIds = new HashSet<>();
             for(Game.Hud h : scene.hud) {
                 if(h == null || h.id == null || h.id.isBlank() || !hudIds.add(h.id)
                         || !Set.of("text","image","button").contains(h.type)
+                        || !Set.of("viewport","content").contains(h.referenceArea)
                         || !Set.of("left","center","right").contains(h.horizontalAnchor)
                         || !Set.of("top","center","bottom").contains(h.verticalAnchor)
                         || !positive(h.width) || !positive(h.height) || !positive(h.fontSize)
@@ -29,7 +30,7 @@ public final class Codec {
             }
             Set<String> objects = new HashSet<>();
             for (Game.Entity e : scene.objects) {
-                if (e == null || e.id == null || !objects.add(e.id) || !positive(e.width) || !positive(e.height) || !Double.isFinite(e.x) || !Double.isFinite(e.y) || !Double.isFinite(e.rotation) || !Double.isFinite(e.speed) || e.speed < 0) throw new IllegalArgumentException("Objeto inválido");
+                if (e == null || e.id == null || e.id.isBlank() || !objects.add(e.id) || !positive(e.width) || !positive(e.height) || !Double.isFinite(e.x) || !Double.isFinite(e.y) || !Double.isFinite(e.rotation) || !Double.isFinite(e.speed) || e.speed < 0) throw new IllegalArgumentException("Objeto inválido");
                 if (e.assetPath == null || e.assetPath.startsWith("/") || e.assetPath.contains("..") || e.assetPath.contains("\\") || e.assetPath.contains(":")) throw new IllegalArgumentException("Asset deve ter caminho relativo seguro");
                 if (e.color == null || !e.color.matches("#[0-9a-fA-F]{6}")) throw new IllegalArgumentException("Cor inválida");
             }
@@ -53,8 +54,9 @@ public final class Codec {
         validateAsset(scene.musicAssetPath);script(scene.scriptClassName);
         if(!Double.isFinite(scene.musicVolume)||scene.musicVolume<0||scene.musicVolume>1)throw new IllegalArgumentException("Volume deve estar entre 0 e 1");
         if(scene.tileMaps==null)throw new IllegalArgumentException("Mapas inválidos");
+        Set<String> mapIds=new HashSet<>();
         for(var map:scene.tileMaps){
-            if(map==null||map.columns<=0||map.rows<=0||map.tileWidth<=0||map.tileHeight<=0||!positive(map.unitScale)||!Double.isFinite(map.x)||!Double.isFinite(map.y)||map.tiles==null||map.layers==null||map.obstacles==null)throw new IllegalArgumentException("Tilemap inválido");
+            if(map==null||map.id==null||map.id.isBlank()||!mapIds.add(map.id)||map.columns<=0||map.rows<=0||map.tileWidth<=0||map.tileHeight<=0||!positive(map.unitScale)||!Double.isFinite(map.x)||!Double.isFinite(map.y)||map.tiles==null||map.layers==null||map.obstacles==null)throw new IllegalArgumentException("Tilemap inválido");
             for(var entry:map.tiles.entrySet()){var tile=entry.getValue();if(entry.getKey()==null||entry.getKey()<=0||tile==null)throw new IllegalArgumentException("Tile inválido");validateAsset(tile.assetPath);if(tile.width<=0||tile.height<=0||tile.sourceX<0||tile.sourceY<0)throw new IllegalArgumentException("Tile inválido");}
             for(var layer:map.layers){if(layer==null||!Double.isFinite(layer.offsetX)||!Double.isFinite(layer.offsetY)||layer.data==null||layer.data.length!=(long)map.columns*map.rows||!Double.isFinite(layer.opacity)||layer.opacity<0||layer.opacity>1)throw new IllegalArgumentException("Camada inválida");for(long gid:layer.data)if(gid<0||gid>0xffffffffL||((gid&0x0fffffffL)!=0&&!map.tiles.containsKey((int)(gid&0x0fffffffL))))throw new IllegalArgumentException("GID inválido ou sem tileset: "+gid);}
             for(var obstacle:map.obstacles)if(obstacle==null||!positive(obstacle.width)||!positive(obstacle.height)||!Double.isFinite(obstacle.x)||!Double.isFinite(obstacle.y))throw new IllegalArgumentException("Colisor do mapa inválido");

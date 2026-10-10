@@ -8,7 +8,8 @@ import java.util.*;
 final class PendingAssets implements AutoCloseable {
     private final Map<String, Path> pending = new LinkedHashMap<>();
     String stage(Path source) throws IOException {
-        String name = UUID.randomUUID()+"-"+source.getFileName();
+        String portable=source.getFileName().toString().replace(':','_').replace('\\','_');while(portable.contains(".."))portable=portable.replace("..","_");
+        String name = UUID.randomUUID()+"-"+portable;
         String filename = source.getFileName().toString();
         String suffix = filename.contains(".") ? filename.substring(filename.lastIndexOf('.')) : ".tmp";
         Path temporary = Files.createTempFile("megalodonte-asset-", suffix);
@@ -20,6 +21,7 @@ final class PendingAssets implements AutoCloseable {
         Path staged = pending.get(asset);
         return staged != null ? staged : project == null ? null : project.resolve(asset);
     }
+    Set<String> stagedPaths(){return Set.copyOf(pending.keySet());}
     void publish(Path project) throws IOException {
         Files.createDirectories(project.resolve("assets"));
         for(var entry:pending.entrySet()) Files.copy(entry.getValue(),project.resolve(entry.getKey()),StandardCopyOption.REPLACE_EXISTING);

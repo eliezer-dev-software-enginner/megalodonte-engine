@@ -14,6 +14,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.*;
 import java.util.concurrent.*;
 import static org.junit.jupiter.api.Assertions.*;
+@SuppressWarnings("unchecked")
 class AlexVsBusEditorTest {
     @TempDir Path temp;
     @Test void gameOpensInEditorAndScriptsStartTitleInPlay()throws Exception{
@@ -35,6 +36,12 @@ class AlexVsBusEditorTest {
                 selector.getSelectionModel().select(3);assertTrue(app.current().states().string("project").get().contains("Menu • Configurações"));
                 app.current().invoke("nextScene");assertEquals(4,selector.getSelectionModel().getSelectedIndex());
                 selector.getSelectionModel().select(0);assertTrue(app.current().states().string("project").get().contains("Menu • Título"));
+                selector.getSelectionModel().select(11);
+                var objectList=(javafx.scene.layout.VBox)((javafx.scene.control.ScrollPane)((Pane)app.current().component("tree").getJavaFxNode()).getChildren().getFirst()).getContent();
+                objectList.getChildren().stream().filter(n->n instanceof javafx.scene.control.Button b&&b.getText().equals("player")).map(n->(javafx.scene.control.Button)n).findFirst().orElseThrow().fire();
+                app.current().invoke("editAnimations");var animationPane=javafx.stage.Window.getWindows().stream().map(javafx.stage.Window::getScene).filter(java.util.Objects::nonNull).map(javafx.scene.Scene::getRoot).filter(root->root.lookup("#animationNames")!=null).findFirst().orElseThrow();
+                ((javafx.scene.control.ListView<String>)animationPane.lookup("#animationNames")).getSelectionModel().select("walk");assertEquals("walk",((javafx.scene.control.ListView<?>)animationPane.lookup("#animationNames")).getSelectionModel().getSelectedItem());FeatureEditorsTest.snapshot(animationPane,"alex-animation-editor");
+                ((javafx.scene.control.Button)((javafx.scene.control.DialogPane)animationPane).lookupButton(javafx.scene.control.ButtonType.CLOSE)).fire();selector.getSelectionModel().select(0);
                 app.current().invoke("togglePlay");var compiled=new PauseTransition(Duration.millis(200));long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(25);compiled.setOnFinished(event->{
                     if(app.current().states().string("mensagem").get().equals("Compilando scripts…")&&System.nanoTime()<deadline){compiled.playFromStart();return;}
                     var image=canvas.snapshot(null,null);long green=0;for(int y=0;y<(int)image.getHeight();y++)for(int x=0;x<(int)image.getWidth();x++){var color=image.getPixelReader().getColor(x,y);if(color.getGreen()>.2&&color.getRed()<.05&&color.getBlue()<.05)green++;}

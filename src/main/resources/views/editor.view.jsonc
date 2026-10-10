@@ -185,6 +185,10 @@
     "mapSelected": {
       "type": "boolean",
       "initial": false
+    },
+    "hudReference": {
+      "type": "string",
+      "initial": ""
     }
   },
   "view": {
@@ -211,10 +215,58 @@
             },
             "children": [
               {
-                "type": "Text",
+                "type": "Row",
                 "props": {
-                  "text": "MEGALODONTE • ENGINE 2D"
-                }
+                  "spacing": 8
+                },
+                "children": [
+                  {
+                    "type": "Text",
+                    "props": {
+                      "text": "MEGALODONTE • ENGINE 2D"
+                    }
+                  },
+                  {
+                    "type": "Button",
+                    "props": {
+                      "text": "Projeto",
+                      "height": 30
+                    },
+                    "events": {
+                      "onClick": "editProjectFeatures"
+                    }
+                  },
+                  {
+                    "type": "Button",
+                    "props": {
+                      "text": "Novo mapa",
+                      "height": 30
+                    },
+                    "events": {
+                      "onClick": "createTileMap"
+                    }
+                  },
+                  {
+                    "type": "Button",
+                    "props": {
+                      "text": "Assets",
+                      "height": 30
+                    },
+                    "events": {
+                      "onClick": "browseAssets"
+                    }
+                  },
+                  {
+                    "type": "Button",
+                    "props": {
+                      "text": "Animar cena",
+                      "height": 30
+                    },
+                    "events": {
+                      "onClick": "toggleAnimationPreview"
+                    }
+                  }
+                ]
               },
               {
                 "type": "Row",
@@ -457,6 +509,16 @@
                     },
                     "events": {
                       "onClick": "openProjectIde"
+                    }
+                  },
+                  {
+                    "type": "Button",
+                    "props": {
+                      "text": "Colisores",
+                      "height": 30
+                    },
+                    "events": {
+                      "onClick": "toggleColliders"
                     }
                   }
                 ]
@@ -783,6 +845,16 @@
                       {
                         "type": "Button",
                         "props": {
+                          "text": "Nome / fundo / opções",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "editSceneFeatures"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
                           "text": "Seguir objeto selecionado",
                           "height": 30
                         },
@@ -928,6 +1000,16 @@
                         },
                         "events": {
                           "onClick": "applyMap"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Editar mapa / camadas / tiles",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "editMapFeatures"
                         }
                       },
                       {
@@ -1084,6 +1166,15 @@
                         }
                       },
                       {
+                        "type": "Text",
+                        "bind": {
+                          "text": "hudReference"
+                        },
+                        "props": {
+                          "wrapWidth": 200
+                        }
+                      },
+                      {
                         "type": "Button",
                         "props": {
                           "text": "Âncora horizontal",
@@ -1106,11 +1197,60 @@
                       {
                         "type": "Button",
                         "props": {
+                          "text": "Área da HUD"
+                        },
+                        "events": {
+                          "onClick": "cycleHudReference"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
                           "text": "Aplicar HUD",
                           "height": 32
                         },
                         "events": {
                           "onClick": "applyHud"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Visibilidade / tipo / imagem",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "editHudFeatures"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Duplicar HUD",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "duplicateHud"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Trazer à frente",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "moveForward"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Enviar para trás",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "moveBackward"
                         }
                       },
                       {
@@ -1317,6 +1457,56 @@
                         },
                         "events": {
                           "onClick": "applyObject"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Animações / prévia",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "editAnimations"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Colisor / propriedades",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "editObjectFeatures"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Remover sprite estático",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "removeSprite"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Trazer à frente",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "moveForward"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "props": {
+                          "text": "Enviar para trás",
+                          "height": 30
+                        },
+                        "events": {
+                          "onClick": "moveBackward"
                         }
                       },
                       {

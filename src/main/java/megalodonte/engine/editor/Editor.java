@@ -47,6 +47,8 @@ public final class Editor extends ViewScript {
     private Process androidBuild;
     private boolean disposed;
     private boolean saved;
+    private boolean showColliders,previewAnimations;
+    private double previewClock;
     private Game.Scene scene() { return runtime == null ? game.scenes.get(sceneIndex) : runtime.scene; }
     @Override public void onSubmit() { applyObject(); }
     @Override public void onMount() {
@@ -66,15 +68,15 @@ public final class Editor extends ViewScript {
             resizingHud=false;
             if(draggingSelection && selectedHud!=null){var b=HudLayout.resolve(selectedHud,canvas.getWidth(),canvas.getHeight());
                 if(Math.abs(e.getX()-(b.x()+b.width()))<=10 && Math.abs(e.getY()-(b.y()+b.height()))<=10){resizingHud=true;return;}}
-            selectedHud=null;
+            var previouslySelectedHud=selectedHud;selectedHud=null;
             var hud=scene().hud;
-            for(int i=hud.size()-1;i>=0;i--){var h=hud.get(i);var b=HudLayout.resolve(h,canvas.getWidth(),canvas.getHeight());
+            for(int i=hud.size()-1;i>=0;i--){var h=hud.get(i);if(!h.visible&&h!=previouslySelectedHud)continue;var b=HudLayout.resolve(h,canvas.getWidth(),canvas.getHeight());
                 if(b.contains(e.getX(),e.getY())){pendingParentChild=null;selectedHud=h;selected=null;hudDragX=e.getX()-b.x();hudDragY=e.getY()-b.y();inspectHud();return;}}
             set("hudSelected",false);
             double x=(e.getX()-ox)/scale, y=(oy-e.getY())/scale;
             Game.Entity hit=null;
             var objects=scene().objects;
-            for(int i=objects.size()-1;i>=0;i--){var obj=objects.get(i);if(EntityGeometry.contains(Hierarchy.worldEntity(scene(),obj),x,y)){hit=obj;break;}}
+            for(int i=objects.size()-1;i>=0;i--){var obj=objects.get(i);if(!obj.visible&&!showColliders)continue;if(EntityGeometry.contains(Hierarchy.worldEntity(scene(),obj),x,y)){hit=obj;break;}}
             if(hit!=null){boolean linking=pendingParentChild!=null;selectObject(hit);
                 if(linking){draggingSelection=false;return;}
                 var world=Hierarchy.pose(scene(),selected);dragX=x-world.x();dragY=y-world.y();
@@ -98,6 +100,10 @@ public final class Editor extends ViewScript {
         sceneList.setCellFactory(list->new ListCell<>(){
             @Override protected void updateItem(Game.Scene item,boolean empty){super.updateItem(item,empty);setText(empty||item==null?null:(getIndex()+1)+". "+item.name+(item.id.equals(game.entrySceneId)?" • inicial":""));}
         });
+        var duplicate=new MenuItem("Duplicar cena");duplicate.setOnAction(e->duplicateScene());var remove=new MenuItem("Excluir cena");remove.setOnAction(e->removeScene());
+        var up=new MenuItem("Mover cena para cima");up.setOnAction(e->sceneUp());var down=new MenuItem("Mover cena para baixo");down.setOnAction(e->sceneDown());
+        var options=new MenuItem("Configurar cena");options.setOnAction(e->editSceneFeatures());sceneList.setContextMenu(new ContextMenu(options,duplicate,remove,new SeparatorMenuItem(),up,down));
+        sceneList.setTooltip(new Tooltip("Clique para selecionar. Botão direito: configurar, duplicar, excluir ou ordenar cenas."));
         sceneList.getSelectionModel().selectedIndexProperty().addListener((o,previous,index)->{if(!updatingSceneList&&index.intValue()>=0)selectScene(index.intValue());});
         ((Pane)component("sceneList").getJavaFxNode()).getChildren().add(sceneList);
         tree=new VBox(6);
@@ -108,7 +114,7 @@ public final class Editor extends ViewScript {
         VBox.setVgrow(objectsScroll,Priority.ALWAYS);
         ((Pane)component("tree").getJavaFxNode()).getChildren().add(objectsScroll);
         timer=new AnimationTimer(){ public void handle(long now){
-            double dt=last==0?0:(now-last)/1e9; last=now;
+            double dt=last==0?0:(now-last)/1e9; last=now;if(runtime==null&&previewAnimations)previewClock+=Math.min(dt,.1);
             if(runtime!=null)try{runtime.update(dt,axis(KeyCode.D,KeyCode.RIGHT)-axis(KeyCode.A,KeyCode.LEFT),axis(KeyCode.W,KeyCode.UP)-axis(KeyCode.S,KeyCode.DOWN));music.update(runtime.scene,path->pendingAssets.resolve(path,directory),Editor.this::message);}catch(Exception error){stop();message("Script/runtime: "+error.getMessage());}
             draw();
         }}; timer.start(); refresh(); restoreLastSaved();inspectScene();
@@ -123,14 +129,20 @@ public final class Editor extends ViewScript {
         if(runtime==null){g.setStroke(Color.web("#ffffff18")); for(int i=(int)Math.max(0,Math.floor(view.left()));i<=Math.min(s.worldWidth,view.left()+view.width());i++)g.strokeLine(ox+i*scale,oy,ox+i*scale,oy-s.worldHeight*scale);for(int i=(int)Math.max(0,Math.floor(view.bottom()));i<=Math.min(s.worldHeight,view.bottom()+view.height());i++)g.strokeLine(ox,oy-i*scale,ox+s.worldWidth*scale,oy-i*scale);}
         TileDraw.render(s,view,(tile,x,y,w,h,alpha,a,b,c,d)->{Image image=assetImage(tile.assetPath);if(image==null||image.isError())return;g.save();g.setGlobalAlpha(alpha);g.translate(x+w/2,y+h/2);g.scale(w,h);g.transform(a,b,c,d,0,0);g.drawImage(image,tile.sourceX,tile.sourceY,tile.width,tile.height,-0.5,-0.5,1,1);g.restore();});
         if(runtime==null){for(var map:s.tileMaps){g.setStroke(Color.web("#ffcc66"));g.strokeRect(ox+map.x*scale,oy-(map.y+map.rows*map.tileHeight*map.unitScale)*scale,map.columns*map.tileWidth*map.unitScale*scale,map.rows*map.tileHeight*map.unitScale*scale);}}
-        for(var e:s.objects){if(!e.visible)continue;var pose=Hierarchy.pose(s,e);double x=ox+pose.x()*scale,y=oy-(pose.y()+e.height)*scale;
+        for(var e:s.objects){if(!e.visible&&e!=selected)continue;var pose=Hierarchy.pose(s,e);double x=ox+pose.x()*scale,y=oy-(pose.y()+e.height)*scale;
             Image image=null;
-            String sprite=Sprites.asset(e);if(!sprite.isBlank())image=assetImage(sprite);
-            g.save();double cx=x+e.width*scale/2,cy=y+e.height*scale/2;
+            String sprite=Sprites.asset(e,runtime==null&&previewAnimations?e.animationTime+previewClock:e.animationTime);if(!sprite.isBlank())image=assetImage(sprite);
+            g.save();if(!e.visible)g.setGlobalAlpha(.35);double cx=x+e.width*scale/2,cy=y+e.height*scale/2;
             g.translate(cx,cy);g.rotate(pose.rotation()%360);if(e.flipX)g.scale(-1,1);g.translate(-cx,-cy);
             if(image!=null&&!image.isError())g.drawImage(image,x,y,e.width*scale,e.height*scale);
             else{g.setFill(Color.web(e.color));g.fillRect(x,y,e.width*scale,e.height*scale);}
             if(runtime==null&&e==selected){g.setStroke(Color.CYAN);g.setLineWidth(2);g.strokeRect(x,y,e.width*scale,e.height*scale);}
+            g.restore();
+        }
+        if(runtime==null&&(showColliders||selected!=null)){
+            g.save();g.setStroke(Color.web("#ffcc66"));g.setLineDashes(4,3);
+            for(var e:s.objects)if((showColliders&&e.solid)||e==selected){var b=megalodonte.engine.Runtime.collisionBounds(s,e);g.strokeRect(ox+b.x()*scale,oy-(b.y()+b.height())*scale,b.width()*scale,b.height()*scale);}
+            if(showColliders)for(var map:s.tileMaps)for(var b:map.obstacles)g.strokeRect(ox+(map.x+b.x*map.unitScale)*scale,oy-(map.y+(b.y+b.height)*map.unitScale)*scale,b.width*map.unitScale*scale,b.height*map.unitScale*scale);
             g.restore();
         }
         if(runtime==null){
@@ -147,8 +159,8 @@ public final class Editor extends ViewScript {
     }
     private void drawHud() {
         var g=canvas.getGraphicsContext2D();
-        for(var h:scene().hud){if(!h.visible)continue;var b=HudLayout.resolve(h,canvas.getWidth(),canvas.getHeight());if(b.scale()<=0)continue;
-            g.save();g.beginPath();g.rect(b.x(),b.y(),b.width(),b.height());g.clip();
+        for(var h:scene().hud){if(!h.visible&&h!=selectedHud)continue;var b=HudLayout.resolve(h,canvas.getWidth(),canvas.getHeight());if(b.scale()<=0)continue;
+            g.save();if(!h.visible)g.setGlobalAlpha(.35);g.beginPath();g.rect(b.x(),b.y(),b.width(),b.height());g.clip();
             if(h.type.equals("button")&&h.assetPath.isBlank()){g.setFill(Color.web("#245878"));g.fillRoundRect(b.x(),b.y(),b.width(),b.height(),8,8);}
             if(h.type.equals("button")&&!h.assetPath.isBlank()){var buttonImage=assetImage(h.assetPath);if(buttonImage!=null)g.drawImage(buttonImage,b.x(),b.y(),b.width(),b.height());}
             g.setFill(Color.web(h.color));
@@ -166,7 +178,7 @@ public final class Editor extends ViewScript {
         if(selectedHud==null){set("hudSelected",false);set("worldSelected",true);return;}set("hudSelected",true);set("worldSelected",false);
         var h=selectedHud;set("hudId",h.id);set("hudText",h.text);set("hudX",""+h.offsetX);set("hudY",""+h.offsetY);
         set("hudWidth",""+h.width);set("hudHeight",""+h.height);set("hudFont",""+h.fontSize);set("hudColor",h.color);
-        set("hudAction",h.action);set("hudScript",h.scriptClassName.isBlank()?"Script: nenhum":"Script: "+h.scriptClassName);set("hudAnchors",h.horizontalAnchor+" / "+h.verticalAnchor);message("HUD selecionada: "+h.type+" • arraste a alça para redimensionar");
+        set("hudReference","Referência: "+(h.referenceArea.equals("content")?"área do conteúdo":"tela segura"));set("hudAction",h.action);set("hudScript",h.scriptClassName.isBlank()?"Script: nenhum":"Script: "+h.scriptClassName);set("hudAnchors",h.horizontalAnchor+" / "+h.verticalAnchor);message("HUD selecionada: "+h.type+" • arraste a alça para redimensionar");
     }
     public void addHudButton(){addHud("button");selectedHud.text="Botão";selectedHud.action="jump";inspectHud();}
     public void addHudText(){addHud("text");}
@@ -174,7 +186,7 @@ public final class Editor extends ViewScript {
         String asset=chooseImage("Adicionar imagem à HUD");if(asset==null)return;
         addHud("image");selectedHud.assetPath=asset;refresh();message("Imagem da HUD importada. Salve o projeto.");
     }
-    private void addHud(String type){stop();pendingParentChild=null;selected=null;selectedHud=new Game.Hud();selectedHud.type=type;
+    private void addHud(String type){stop();pendingParentChild=null;selected=null;selectedHud=new Game.Hud();selectedHud.type=type;selectedHud.referenceArea=game.scenes.get(sceneIndex).hud.stream().findFirst().map(h->h.referenceArea).orElse("viewport");
         if(type.equals("image")){selectedHud.width=128;selectedHud.height=128;}
         game.scenes.get(sceneIndex).hud.add(selectedHud);refresh();inspectHud();}
     public void applyHud(){commitHudInspector();}
@@ -184,10 +196,21 @@ public final class Editor extends ViewScript {
         Game copy=Codec.copy(game);int index=game.scenes.get(sceneIndex).hud.indexOf(selectedHud);copy.scenes.get(sceneIndex).hud.set(index,h);Codec.validate(copy);
         game.scenes.get(sceneIndex).hud.set(index,h);selectedHud=h;refresh();inspectHud();return true;
     }catch(Exception e){message("HUD inválida: "+e.getMessage());return false;}}
-    public void cycleHudHorizontal(){if(selectedHud==null)return;stop();selectedHud.horizontalAnchor=switch(selectedHud.horizontalAnchor){case "left"->"center";case "center"->"right";default->"left";};inspectHud();}
-    public void cycleHudVertical(){if(selectedHud==null)return;stop();selectedHud.verticalAnchor=switch(selectedHud.verticalAnchor){case "top"->"center";case "center"->"bottom";default->"top";};inspectHud();}
+    private void changeHudAnchor(String axis){
+        if(selectedHud==null||!commitHudInspector())return;
+        var box=HudLayout.resolve(selectedHud,canvas.getWidth(),canvas.getHeight());
+        switch(axis){
+            case "horizontal"->selectedHud.horizontalAnchor=switch(selectedHud.horizontalAnchor){case "left"->"center";case "center"->"right";default->"left";};
+            case "vertical"->selectedHud.verticalAnchor=switch(selectedHud.verticalAnchor){case "top"->"center";case "center"->"bottom";default->"top";};
+            default->selectedHud.referenceArea=selectedHud.referenceArea.equals("content")?"viewport":"content";
+        }
+        HudLayout.position(selectedHud,box.x(),box.y(),canvas.getWidth(),canvas.getHeight());inspectHud();draw();
+    }
+    public void cycleHudHorizontal(){changeHudAnchor("horizontal");}
+    public void cycleHudVertical(){changeHudAnchor("vertical");}
+    public void cycleHudReference(){changeHudAnchor("reference");}
     public void importHudImage(){
-        if(selectedHud==null||!selectedHud.type.equals("image")){message("Selecione uma imagem da HUD.");return;}
+        if(selectedHud==null||!(selectedHud.type.equals("image")||selectedHud.type.equals("button"))){message("Selecione uma imagem da HUD.");return;}
         String asset=chooseImage("Trocar imagem da HUD");if(asset==null)return;
         stop();selectedHud.assetPath=asset;refresh();message("Imagem da HUD importada. Salve o projeto.");
     }
@@ -199,7 +222,7 @@ public final class Editor extends ViewScript {
     private String chooseImage(String title){
         FileChooser chooser=new FileChooser();chooser.setTitle(title);
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Imagens PNG/JPEG","*.png","*.jpg","*.jpeg","*.PNG","*.JPG","*.JPEG"));
-        try{if(lastImageDirectory==null)lastImageDirectory=recentImages.lastSaved();}catch(Exception ignored){}
+        try{Path remembered=recentImages.lastSaved();if(remembered!=null)lastImageDirectory=remembered;}catch(Exception ignored){}
         if(lastImageDirectory!=null && Files.isDirectory(lastImageDirectory))chooser.setInitialDirectory(lastImageDirectory.toFile());
         else if(directory!=null && Files.isDirectory(directory.resolve("assets")))chooser.setInitialDirectory(directory.resolve("assets").toFile());
         var file=chooser.showOpenDialog(canvas.getScene().getWindow());if(file==null)return null;
@@ -213,7 +236,7 @@ public final class Editor extends ViewScript {
         }catch(Exception e){message("Falha ao importar imagem: "+e.getMessage());return null;}
     }
     private void inspect(){set("hudSelected",false);set("worldSelected",true);if(selected==null)return;set("name",selected.name);set("x",""+selected.x);set("y",""+selected.y);set("width",""+selected.width);set("height",""+selected.height);set("color",selected.color);set("speed",""+selected.speed);set("rotation",""+selected.rotation);set("objectScript",selected.scriptClassName.isBlank()?"Script: nenhum":"Script: "+selected.scriptClassName);set("parentName",selected.parentId.isEmpty()?"Pai: nenhum":"Pai: "+Hierarchy.find(scene(),selected.parentId).name);message("Selecionado: "+selected.name+" • controlável="+selected.player+" • colisor="+selected.solid);}
-    private void refresh(){refreshSceneList();draw();tree.getChildren().clear();for(var e:game.scenes.get(sceneIndex).objects){Button b=new Button((e.parentId.isEmpty()?"":"↳ ")+e.name);b.setMaxWidth(Double.MAX_VALUE);b.setOnAction(event->selectObject(e));tree.getChildren().add(b);}for(var map:game.scenes.get(sceneIndex).tileMaps){Button b=new Button("Mapa • "+map.name);b.setOnAction(e->{stop();selectedMap=map;set("mapSelected",true);set("mapX",""+map.x);set("mapY",""+map.y);set("mapScale",""+map.unitScale);message("Mapa selecionado: "+map.name);});tree.getChildren().add(b);}for(var h:game.scenes.get(sceneIndex).hud){Button b=new Button("HUD • "+(h.type.equals("text")?h.text:h.id));b.setOnAction(event->{stop();pendingParentChild=null;selected=null;selectedHud=h;inspectHud();});tree.getChildren().add(b);}set("projectPath",directory==null?"Projeto: ainda não salvo":"Projeto: "+directory.resolve("game.json").toAbsolutePath().normalize());set("project",game.name+" • "+game.scenes.get(sceneIndex).name+" • inicial: "+game.entrySceneId+" • "+(directory==null?"não salvo":directory));}
+    private void refresh(){refreshSceneList();draw();tree.getChildren().clear();for(var e:game.scenes.get(sceneIndex).objects){Button b=new Button((e.parentId.isEmpty()?"":"↳ ")+e.name);b.setMaxWidth(Double.MAX_VALUE);b.setOnAction(event->selectObject(e));tree.getChildren().add(b);}for(var map:game.scenes.get(sceneIndex).tileMaps){Button b=new Button("Mapa • "+map.name);b.setOnAction(e->{stop();selected=null;selectedHud=null;set("hudSelected",false);set("worldSelected",true);selectedMap=map;set("mapSelected",true);set("mapX",""+map.x);set("mapY",""+map.y);set("mapScale",""+map.unitScale);message("Mapa selecionado: "+map.name);});tree.getChildren().add(b);}for(var h:game.scenes.get(sceneIndex).hud){Button b=new Button("HUD • "+(h.type.equals("text")?h.text:h.id));b.setOnAction(event->{stop();pendingParentChild=null;selected=null;selectedHud=h;inspectHud();});tree.getChildren().add(b);}set("projectPath",directory==null?"Projeto: ainda não salvo":"Projeto: "+directory.resolve("game.json").toAbsolutePath().normalize());set("project",game.name+" • "+game.scenes.get(sceneIndex).name+" • inicial: "+game.entrySceneId+" • "+(directory==null?"não salvo":directory));}
     private void stop(){playGeneration++;compiling=false;if(runtime!=null)runtime.close();runtime=null;if(scriptCompiler!=null){scriptCompiler.close();scriptCompiler=null;}music.close();music.pause(false);music.mute(false);keys.clear();heldHud.clear();last=0;}
     public void togglePlay(){
         pendingParentChild=null;
@@ -319,6 +342,38 @@ public final class Editor extends ViewScript {
     }
     public void togglePlayer(){stop();if(selected!=null){selected.player=!selected.player;inspect();}}
     public void toggleSolid(){stop();if(selected!=null){selected.solid=!selected.solid;inspect();}}
+    public void browseAssets(){stop();AssetBrowser.show(owner(),pendingAssets,directory);}
+    public void duplicateScene(){
+        stop();if(!commitScene()||!commitObjectInspector()||!commitHudInspector()||!commitMapInspector())return;
+        var source=game.scenes.get(sceneIndex);var copy=Codec.GSON.fromJson(Codec.GSON.toJson(source),Game.Scene.class);copy.id=UUID.randomUUID().toString();copy.name=source.name+" (cópia)";game.scenes.add(sceneIndex+1,copy);sceneIndex++;clearSelection();refresh();inspectScene();message("Cena duplicada; os scripts foram mantidos. Revise seus destinos de navegação.");
+    }
+    public void removeScene(){
+        if(game.scenes.size()==1){message("O projeto precisa de ao menos uma cena.");return;}
+        stop();var scene=game.scenes.get(sceneIndex);game.scenes.remove(sceneIndex);sceneIndex=Math.min(sceneIndex,game.scenes.size()-1);if(game.entrySceneId.equals(scene.id))game.entrySceneId=game.scenes.get(sceneIndex).id;clearSelection();refresh();inspectScene();message("Cena removida. Revise referências nos scripts antes de salvar.");
+    }
+    public void sceneUp(){moveScene(-1);}
+    public void sceneDown(){moveScene(1);}
+    private void moveScene(int delta){int next=sceneIndex+delta;if(next<0||next>=game.scenes.size())return;stop();Collections.swap(game.scenes,sceneIndex,next);sceneIndex=next;refresh();inspectScene();}
+    private void clearSelection(){selected=null;selectedHud=null;selectedMap=null;pendingParentChild=null;set("hudSelected",false);set("worldSelected",true);set("mapSelected",false);}
+    private Window owner(){return canvas.getScene().getWindow();}
+    private void acceptEntity(Game.Entity value){
+        int i=game.scenes.get(sceneIndex).objects.indexOf(selected);if(i<0)throw new IllegalStateException("Objeto não está mais nesta cena");
+        var copy=DocumentEdits.entity(game,sceneIndex,i,value);var target=copy.scenes.get(sceneIndex);game.scenes.set(sceneIndex,target);selected=target.objects.get(i);selectedMap=null;set("mapSelected",false);set("cameraMode","Câmera: "+target.camera.mode+" • alvo: "+target.camera.targetId);refresh();inspect();
+    }
+    public void editAnimations(){if(selected==null){message("Selecione um objeto.");return;}if(!commitObjectInspector())return;new AnimationEditor(selected,this::acceptEntity,pendingAssets,directory,owner()).show();}
+    public void editObjectFeatures(){if(selected==null){message("Selecione um objeto.");return;}if(!commitObjectInspector())return;FeatureForms.entity(owner(),selected,this::acceptEntity);}
+    public void editProjectFeatures(){stop();FeatureForms.project(owner(),game,value->{game=value;clearSelection();refresh();inspectScene();});}
+    public void editSceneFeatures(){stop();if(!commitScene())return;FeatureForms.scene(owner(),game.scenes.get(sceneIndex),value->{var copy=DocumentEdits.scene(game,sceneIndex,value);game=copy;clearSelection();refresh();inspectScene();});}
+    public void editHudFeatures(){if(selectedHud==null){message("Selecione uma HUD.");return;}if(!commitHudInspector())return;FeatureForms.hud(owner(),selectedHud,value->{Game copy=Codec.copy(game);int i=game.scenes.get(sceneIndex).hud.indexOf(selectedHud);copy.scenes.get(sceneIndex).hud.set(i,value);Codec.validate(copy);game.scenes.get(sceneIndex).hud.set(i,value);selectedHud=value;refresh();inspectHud();});}
+    public void editMapFeatures(){if(selectedMap==null){message("Selecione um mapa na lista.");return;}if(!commitMapInspector())return;new TileMapEditor(selectedMap,value->{Game copy=Codec.copy(game);int i=game.scenes.get(sceneIndex).tileMaps.indexOf(selectedMap);copy.scenes.get(sceneIndex).tileMaps.set(i,value);Codec.validate(copy);game.scenes.get(sceneIndex).tileMaps.set(i,value);selectedMap=value;refresh();},pendingAssets,directory,owner()).show();}
+    public void createTileMap(){stop();var map=new Game.TileMap();map.name="Mapa "+(scene().tileMaps.size()+1);map.columns=20;map.rows=18;map.tileWidth=map.tileHeight=24;map.unitScale=1.0/24;var layer=new Game.TileLayer();layer.name="Camada 1";layer.data=new long[map.columns*map.rows];map.layers.add(layer);scene().tileMaps.add(map);scene().worldWidth=Math.max(scene().worldWidth,map.columns*map.tileWidth*map.unitScale);scene().worldHeight=Math.max(scene().worldHeight,map.rows*map.tileHeight*map.unitScale);set("sceneWidth",""+scene().worldWidth);set("sceneHeight",""+scene().worldHeight);selectedMap=map;selected=null;selectedHud=null;set("hudSelected",false);set("mapSelected",true);set("mapX","0");set("mapY","0");set("mapScale",""+map.unitScale);refresh();editMapFeatures();}
+    public void toggleAnimationPreview(){if(runtime!=null)stop();previewAnimations=!previewAnimations;previewClock=0;message("Prévia de animações na cena: "+(previewAnimations?"ativa (sem scripts)":"pausada"));}
+    public void toggleColliders(){showColliders=!showColliders;draw();message("Colisores: "+(showColliders?"visíveis":"ocultos"));}
+    public void duplicateHud(){if(selectedHud==null)return;if(!commitHudInspector())return;var value=selectedHud.copy();if(value.action.isBlank())value.action=selectedHud.id;value.id=UUID.randomUUID().toString();value.offsetX+=24;value.offsetY+=24;game.scenes.get(sceneIndex).hud.add(value);selectedHud=value;refresh();inspectHud();}
+    public void moveForward(){moveLayerOrder(true);}
+    public void moveBackward(){moveLayerOrder(false);}
+    private void moveLayerOrder(boolean forward){stop();if(selectedHud!=null){var items=game.scenes.get(sceneIndex).hud;int i=items.indexOf(selectedHud),next=forward?i+1:i-1;if(i>=0&&next>=0&&next<items.size())Collections.swap(items,i,next);}else if(selected!=null){var items=game.scenes.get(sceneIndex).objects;int i=items.indexOf(selected),next=forward?i+1:i-1;if(i>=0&&next>=0&&next<items.size())Collections.swap(items,i,next);}refresh();}
+    public void removeSprite(){if(selected==null)return;stop();selected.assetPath="";refresh();}
     public void applyObject(){commitObjectInspector();}
     private boolean commitObjectInspector(){if(selected==null)return true;stop();try{var next=selected.copy();next.name=text("name");next.x=Double.parseDouble(text("x"));next.y=Double.parseDouble(text("y"));next.width=Double.parseDouble(text("width"));next.height=Double.parseDouble(text("height"));next.color=text("color");next.speed=Double.parseDouble(text("speed"));next.rotation=EntityGeometry.normalize(Double.parseDouble(text("rotation")));Game check=Codec.copy(game);int index=game.scenes.get(sceneIndex).objects.indexOf(selected);check.scenes.get(sceneIndex).objects.set(index,next);Codec.validate(check);game.scenes.get(sceneIndex).objects.set(index,next);selected=next;pendingParentChild=null;refresh();inspect();return true;}catch(Exception e){message("Propriedades inválidas: "+e.getMessage());return false;}}
     public void importSprite(){
