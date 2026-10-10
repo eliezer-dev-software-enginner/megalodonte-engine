@@ -265,6 +265,16 @@
                     "events": {
                       "onClick": "toggleAnimationPreview"
                     }
+                  },
+                  {
+                    "type": "Button",
+                    "props": {
+                      "text": "Android Release",
+                      "height": 30
+                    },
+                    "events": {
+                      "onClick": "exportAndroidRelease"
+                    }
                   }
                 ]
               },

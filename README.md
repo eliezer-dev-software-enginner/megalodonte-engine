@@ -75,3 +75,5 @@ Exportações bem-sucedidas pelo terminal também registram o projeto como o úl
 A lista **CENAS**, no canto superior direito, permite abrir qualquer cena diretamente. Ela destaca a cena selecionada e identifica a cena inicial; abrir/criar projetos, adicionar cenas e usar Próxima cena mantém a lista sincronizada. Trocar de cena aplica os campos válidos do inspetor antes de mudar a seleção.
 
 A cobertura dos recursos do runtime pela interface e os fluxos de animação/mapas estão em [Recursos do editor](docs/EDITOR_FEATURES.md).
+
+Para preparar um APK/AAB release assinado pelo Android Studio, use **Android Release**. Configure `versionCode` e `versionName` em **Projeto** e siga [Android Release](docs/ANDROID_RELEASE.md).

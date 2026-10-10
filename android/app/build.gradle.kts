@@ -38,7 +38,7 @@ android {
         require(applicationId!!.matches(Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+")));
         manifestPlaceholders["gameLauncherIcon"] = if(customIcon.get().isBlank()) "@drawable/engine_icon" else "@mipmap/ic_launcher"
         testInstrumentationRunner = "megalodonte.engine.android.GameSmokeInstrumentation";
-        resValue("string", "app_name", providers.gradleProperty("gameName").orElse("Megalodonte Game").get()); minSdk = 35; targetSdk = 35; versionCode = 1; versionName = "0.1.0" }
+        resValue("string", "app_name", providers.gradleProperty("gameName").orElse("Megalodonte Game").get()); minSdk = 35; targetSdk = 35; versionCode = providers.gradleProperty("gameVersionCode").orElse("1").get().toInt(); versionName = providers.gradleProperty("gameVersionName").orElse("0.1.0").get() }
     sourceSets.getByName("main").res.srcDir(iconResources.get().asFile)
     androidResources { noCompress += listOf("mp3", "wav") }
     sourceSets.getByName("main").java.srcDir(providers.gradleProperty("gameScripts").orElse("src/main/gameScripts").get())

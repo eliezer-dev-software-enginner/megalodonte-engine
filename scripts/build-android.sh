@@ -24,9 +24,11 @@ if icon:
     if not target.is_relative_to(root) or not target.is_file() or target.suffix.lower()!=".png": raise SystemExit("Ícone PNG inválido: "+icon)
     print(target)
 else: print("")
+print(game.get("versionCode",1))
+print(game.get("versionName","0.1.0"))
 META
 )
-bash "$engine_dir/android/gradlew" -p "$engine_dir/android" :app:assembleDebug -PgameAssets="$staging_dir/game" -PgameScripts="$staging_dir/scripts" -PgameApplicationId="${metadata[0]}" -PgameName="${metadata[1]}" -PgameIcon="${metadata[2]}"
+bash "$engine_dir/android/gradlew" -p "$engine_dir/android" :app:assembleDebug -PgameAssets="$staging_dir/game" -PgameScripts="$staging_dir/scripts" -PgameApplicationId="${metadata[0]}" -PgameName="${metadata[1]}" -PgameIcon="${metadata[2]}" -PgameVersionCode="${metadata[3]}" -PgameVersionName="${metadata[4]}"
 mkdir -p "$game_dir/build/android"
 cp "$engine_dir/android/app/build/outputs/apk/debug/app-debug.apk" "$game_dir/build/android/game-debug.apk.tmp"
 mv "$game_dir/build/android/game-debug.apk.tmp" "$game_dir/build/android/game-debug.apk"
