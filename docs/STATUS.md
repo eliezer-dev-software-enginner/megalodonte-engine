@@ -2,7 +2,7 @@
 
 Implementado: editor JSONC, projetos externos, salvamento por arquivo temporário e substituição, cenas e entrada, objetos, sprites, inspector, arraste, Play isolado, controle e colisão compartilhados, runtime e build Android debug em segundo plano pela UI, com log e publicação após sucesso; mapas Tiled TMX/TMJ, câmera fixa/follow/zoom/fade, música por cena, ações HUD multitoque, scripts Java de objetos/HUD/cena com editor e compilação, abertura da pasta/IDE.
 
-Pendências explícitas: importador Nojo v2, animação, desfazer/refazer, autosave, gerenciamento de assets, progresso detalhado/cancelamento de build Android, release assinado/AAB, empacotamento desktop. Skins Scene2D ficam fora do escopo.
+Pendências explícitas: importador Nojo v2, editor visual de animações, desfazer/refazer, autosave, gerenciamento de assets, progresso detalhado/cancelamento de build Android, release assinado/AAB. Skins Scene2D ficam fora do escopo.
 
 Não existe paridade completa com o Nojo. O núcleo atual estabelece um jogo simples jogável nos dois destinos e pontos de extensão. Validação visual e em dispositivo deve ser registrada a cada incremento.
 
@@ -65,3 +65,9 @@ Salvar incorpora os campos do inspector de objeto/HUD, validando antes de gravar
 Importação de mapas ortogonais finitos, tilesets TSX/TSJ e atlas/coleções de imagens; camadas CSV/XML/JSON/base64 zlib/gzip, flags de espelhamento e colisores retangulares. CameraView e TileDraw compartilham projeção e recorte entre desktop/Android. Música WAV/MP3 por cena e efeitos via scripts. Scripts Java 17 usam lifecycle e contexto portável; Play compila em segundo plano e Android compila fontes no APK. Editor de scripts preserva alterações ao trocar/fechar arquivo, mostra linha/coluna dos erros e gera projeto Gradle para IDE externa.
 
 Testes cobrem projeção/follow/clamp/fade, colisão de mapas, lifecycle/ações/transição de cena, importação e validação XML, compilação real de scripts, persistência e renderização das novas telas. O exemplo gerado reúne esses recursos e foi exportado para APK. Não havia dispositivo conectado para validar áudio/toque no hardware. Consulte GAMEPLAY.md para limites da importação e do editor de código.
+
+## Alex vs Bus e Desktop — 10/10/2026
+
+Adaptação das 13 fases originais em projeto externo: tilemaps e assets, scripts Java de gameplay/título/final, física de plataforma, moedas, molas, cordas, checkpoints, perigos, pausa e progressão. O núcleo ganhou animação por frames, caixas de colisão ajustáveis, contato com chão, Movement por eixo, estado de sessão e restauração de cena ao reiniciar. Desktop standalone com runtime Java/JavaFX e scripts compilados; Android com ID/nome próprio. Ambos os exportadores abrem o diretório ao concluir.
+
+Testes cobrem o jogo real e renderização, além de teste Android Instrumentation com toques simultâneos, pausa/retomada, reinício e seleção de fase. Detalhes da adaptação e limites ficam no README do jogo e em DESKTOP_EXPORT.md.

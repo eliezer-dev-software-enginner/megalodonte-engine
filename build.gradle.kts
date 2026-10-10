@@ -29,3 +29,19 @@ tasks.register<JavaExec>("createExample") {
     mainClass.set("megalodonte.engine.editor.ExampleProject")
     args(providers.gradleProperty("exampleDir").orElse(layout.buildDirectory.dir("example-game").get().asFile.absolutePath).get())
 }
+
+
+tasks.register<JavaExec>("packageGameDesktop") {
+    group = "distribution"
+    description = "Builds a standalone game including its JVM and JavaFX"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("megalodonte.engine.editor.DesktopPackager")
+    args(providers.gradleProperty("gameDir").orElse("").get())
+}
+
+tasks.register<JavaExec>("prepareGameIde") {
+    group = "application"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("megalodonte.engine.editor.ProjectTools")
+    args(providers.gradleProperty("gameDir").orElse("").get())
+}

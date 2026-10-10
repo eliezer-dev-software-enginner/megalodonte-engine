@@ -10,6 +10,7 @@ final class ScriptCompiler implements AutoCloseable {
     private final URLClassLoader owned;
     private Path compiledDirectory;
     private ScriptCompiler(ClassLoader loader,URLClassLoader owned){this.loader=loader;this.owned=owned;}
+    Path classesDirectory(){return compiledDirectory;}
     static ScriptCompiler compile(Path project)throws Exception{
         Path sources=project.resolve("scripts");
         if(!Files.isDirectory(sources))return new ScriptCompiler(GameScript.class.getClassLoader(),null);
@@ -39,7 +40,7 @@ final class ScriptCompiler implements AutoCloseable {
         writeIfMissing(project.resolve(".gitignore"),".engine/\nbuild/\n.gradle/\n");
     }
     private static void writeIfMissing(Path file,String content)throws Exception{if(!Files.exists(file))Files.writeString(file,content);}
-    private static void copyJar(Class<?> type,Path target)throws Exception{
+    static void copyJar(Class<?> type,Path target)throws Exception{
         Path source=Path.of(type.getProtectionDomain().getCodeSource().getLocation().toURI());
         if(Files.isRegularFile(source))Files.copy(source,target,StandardCopyOption.REPLACE_EXISTING);
         else{

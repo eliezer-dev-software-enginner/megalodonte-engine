@@ -20,6 +20,7 @@ O editor exige JDK 25. Dependências Megalodonte são resolvidas por composite b
 - [Arquitetura e referência Nojo](docs/ARCHITECTURE.md)
 - [Estado e próximos passos](docs/STATUS.md)
 - [Tilemaps, câmera, áudio e scripts Java](docs/GAMEPLAY.md)
+- [Build Desktop independente e abertura da saída](docs/DESKTOP_EXPORT.md)
 
 Validação realizada: testes desktop/núcleo/framework, renderização do editor, build do APK, lint Android e exportação de projeto externo. Ainda sem teste em dispositivo. Salve antes de usar Novo/Abrir: não há autosave nesta versão.
 
@@ -62,3 +63,13 @@ bash gradlew createExample -PexampleDir=/caminho/novo/meu-exemplo
 Escolha uma pasta sem game.json existente. Abra o game.json gerado na engine e clique Play. WASD/setas ou os botões de HUD movem o jogador. O botão **Scripts Java** abre o editor de código com números de linha, salvamento e diagnósticos do compilador. Anexe uma classe ao objeto, HUD ou cena; salve o projeto para persistir o anexo. Ao iniciar Play, todos os fontes de scripts/ são compilados novamente. **Abrir na IDE** prepara um projeto Gradle Java e abre o executável informado; **Pasta do projeto** abre o gerenciador de arquivos.
 
 Os scripts usam Java 17 e a API engine-core, sem classes JavaFX/libGDX/Android. No APK são compilados antecipadamente pelo build Android. Não há compilador Java no celular. Consulte [o guia de gameplay](docs/GAMEPLAY.md) para um exemplo de código e limitações.
+
+## Alex vs Bus
+
+O projeto `../../games/alex-vs-bus/game.json` é a adaptação das 13 fases de Alex vs Bus para a engine. Seus scripts implementam plataformas, moedas, molas, cordas, checkpoints, perigos, pausa, cronômetro, cenas de chegada e final. Abra o documento na engine e clique Play. O projeto inclui assets originais, revisão da referência, créditos/licenças e ferramentas de geração/build.
+
+Exportar Desktop cria o jogador independente com Java/JavaFX; Exportar Android usa o applicationId/nome do jogo. Após cada build bem-sucedida, a pasta da saída abre no explorador. Sprites aceitam animações por frames, espelhamento e visibilidade, e os scripts podem usar caixas de colisão menores que a imagem.
+
+Exportações bem-sucedidas pelo terminal também registram o projeto como o último usado pelo editor. Para registrar um projeto criado externamente sem exportar, execute `bash scripts/remember-project.sh /pasta/do/jogo`. A preferência fica em `~/.config/megalodonte-engine/last-saved-project.txt`; o helper aceita `ENGINE_PREFERENCES_FILE` para testes/ambientes isolados.
+
+A lista **CENAS**, no canto superior direito, permite abrir qualquer cena diretamente. Ela destaca a cena selecionada e identifica a cena inicial; abrir/criar projetos, adicionar cenas e usar Próxima cena mantém a lista sincronizada. Trocar de cena aplica os campos válidos do inspetor antes de mudar a seleção.

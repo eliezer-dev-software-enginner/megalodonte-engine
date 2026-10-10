@@ -35,6 +35,8 @@ public final class Editor extends ViewScript {
     private final RecentProject recentProject = RecentProject.userPreference();
     private Canvas canvas;
     private VBox tree;
+    private ListView<Game.Scene> sceneList;
+    private boolean updatingSceneList;
     private AnimationTimer timer;
     private megalodonte.engine.Runtime runtime;
     private final Set<KeyCode> keys = new HashSet<>();
@@ -49,7 +51,7 @@ public final class Editor extends ViewScript {
     @Override public void onSubmit() { applyObject(); }
     @Override public void onMount() {
         Pane host=(Pane)component("viewport").getJavaFxNode();
-        canvas=new Canvas(720,480); canvas.setManaged(false); host.getChildren().add(canvas);
+        canvas=new Canvas(720,480);canvas.getGraphicsContext2D().setImageSmoothing(false); canvas.setManaged(false); host.getChildren().add(canvas);
         canvas.widthProperty().bind(host.widthProperty()); canvas.heightProperty().bind(host.heightProperty());
         canvas.setFocusTraversable(true);
         canvas.setOnKeyPressed(e -> {keys.add(e.getCode());if(runtime!=null)runtime.setAction(e.getCode().name().toLowerCase(Locale.ROOT),true);if(e.getCode()==KeyCode.ESCAPE){pendingParentChild=null;message("Vínculo cancelado.");}}); canvas.setOnKeyReleased(e -> {keys.remove(e.getCode());if(runtime!=null)runtime.setAction(e.getCode().name().toLowerCase(Locale.ROOT),false);});
@@ -57,7 +59,7 @@ public final class Editor extends ViewScript {
         canvas.setOnMousePressed(e -> {
             draggingSelection=false;
             canvas.requestFocus();
-            if(runtime!=null){for(var hud:runtime.scene.hud)if(hud.type.equals("button")&&HudLayout.resolve(hud,canvas.getWidth(),canvas.getHeight()).contains(e.getX(),e.getY())){String action=hud.action.isBlank()?hud.id:hud.action;runtime.setAction(action,true);heldHud.add(action);}return;}
+            if(runtime!=null){for(var hud:runtime.scene.hud)if(hud.visible&&hud.type.equals("button")&&HudLayout.resolve(hud,canvas.getWidth(),canvas.getHeight()).contains(e.getX(),e.getY())){String action=hud.action.isBlank()?hud.id:hud.action;runtime.setAction(action,true);heldHud.add(action);}return;}
             if(e.getButton()==MouseButton.MIDDLE){panX=e.getX();panY=e.getY();return;}
             if(e.getButton()!=MouseButton.PRIMARY && e.getButton()!=MouseButton.SECONDARY)return;
             draggingSelection=e.getButton()==MouseButton.PRIMARY;
@@ -92,6 +94,12 @@ public final class Editor extends ViewScript {
         });
         canvas.setOnMouseReleased(e -> { if(runtime!=null)for(String action:heldHud)runtime.setAction(action,false);heldHud.clear();draggingSelection=false; resizingHud=false; });
         canvas.setOnScroll(e->{if(runtime==null){scene().camera.zoom=Math.max(0.05,Math.min(20,scene().camera.zoom*Math.exp(e.getDeltaY()*0.002)));inspectScene();}});
+        sceneList=new ListView<>();sceneList.setId("sceneSelector");sceneList.setMaxSize(Double.MAX_VALUE,Double.MAX_VALUE);
+        sceneList.setCellFactory(list->new ListCell<>(){
+            @Override protected void updateItem(Game.Scene item,boolean empty){super.updateItem(item,empty);setText(empty||item==null?null:(getIndex()+1)+". "+item.name+(item.id.equals(game.entrySceneId)?" • inicial":""));}
+        });
+        sceneList.getSelectionModel().selectedIndexProperty().addListener((o,previous,index)->{if(!updatingSceneList&&index.intValue()>=0)selectScene(index.intValue());});
+        ((Pane)component("sceneList").getJavaFxNode()).getChildren().add(sceneList);
         tree=new VBox(6);
         ScrollPane objectsScroll=new ScrollPane(tree);
         objectsScroll.setFitToWidth(true);
@@ -115,11 +123,11 @@ public final class Editor extends ViewScript {
         if(runtime==null){g.setStroke(Color.web("#ffffff18")); for(int i=(int)Math.max(0,Math.floor(view.left()));i<=Math.min(s.worldWidth,view.left()+view.width());i++)g.strokeLine(ox+i*scale,oy,ox+i*scale,oy-s.worldHeight*scale);for(int i=(int)Math.max(0,Math.floor(view.bottom()));i<=Math.min(s.worldHeight,view.bottom()+view.height());i++)g.strokeLine(ox,oy-i*scale,ox+s.worldWidth*scale,oy-i*scale);}
         TileDraw.render(s,view,(tile,x,y,w,h,alpha,a,b,c,d)->{Image image=assetImage(tile.assetPath);if(image==null||image.isError())return;g.save();g.setGlobalAlpha(alpha);g.translate(x+w/2,y+h/2);g.scale(w,h);g.transform(a,b,c,d,0,0);g.drawImage(image,tile.sourceX,tile.sourceY,tile.width,tile.height,-0.5,-0.5,1,1);g.restore();});
         if(runtime==null){for(var map:s.tileMaps){g.setStroke(Color.web("#ffcc66"));g.strokeRect(ox+map.x*scale,oy-(map.y+map.rows*map.tileHeight*map.unitScale)*scale,map.columns*map.tileWidth*map.unitScale*scale,map.rows*map.tileHeight*map.unitScale*scale);}}
-        for(var e:s.objects){var pose=Hierarchy.pose(s,e);double x=ox+pose.x()*scale,y=oy-(pose.y()+e.height)*scale;
+        for(var e:s.objects){if(!e.visible)continue;var pose=Hierarchy.pose(s,e);double x=ox+pose.x()*scale,y=oy-(pose.y()+e.height)*scale;
             Image image=null;
-            if(!e.assetPath.isBlank())image=assetImage(e.assetPath);
+            String sprite=Sprites.asset(e);if(!sprite.isBlank())image=assetImage(sprite);
             g.save();double cx=x+e.width*scale/2,cy=y+e.height*scale/2;
-            g.translate(cx,cy);g.rotate(pose.rotation()%360);g.translate(-cx,-cy);
+            g.translate(cx,cy);g.rotate(pose.rotation()%360);if(e.flipX)g.scale(-1,1);g.translate(-cx,-cy);
             if(image!=null&&!image.isError())g.drawImage(image,x,y,e.width*scale,e.height*scale);
             else{g.setFill(Color.web(e.color));g.fillRect(x,y,e.width*scale,e.height*scale);}
             if(runtime==null&&e==selected){g.setStroke(Color.CYAN);g.setLineWidth(2);g.strokeRect(x,y,e.width*scale,e.height*scale);}
@@ -139,9 +147,10 @@ public final class Editor extends ViewScript {
     }
     private void drawHud() {
         var g=canvas.getGraphicsContext2D();
-        for(var h:scene().hud){var b=HudLayout.resolve(h,canvas.getWidth(),canvas.getHeight());if(b.scale()<=0)continue;
+        for(var h:scene().hud){if(!h.visible)continue;var b=HudLayout.resolve(h,canvas.getWidth(),canvas.getHeight());if(b.scale()<=0)continue;
             g.save();g.beginPath();g.rect(b.x(),b.y(),b.width(),b.height());g.clip();
-            if(h.type.equals("button")){g.setFill(Color.web("#245878"));g.fillRoundRect(b.x(),b.y(),b.width(),b.height(),8,8);}
+            if(h.type.equals("button")&&h.assetPath.isBlank()){g.setFill(Color.web("#245878"));g.fillRoundRect(b.x(),b.y(),b.width(),b.height(),8,8);}
+            if(h.type.equals("button")&&!h.assetPath.isBlank()){var buttonImage=assetImage(h.assetPath);if(buttonImage!=null)g.drawImage(buttonImage,b.x(),b.y(),b.width(),b.height());}
             g.setFill(Color.web(h.color));
             if(h.type.equals("text")||h.type.equals("button")){
                 g.setFont(javafx.scene.text.Font.font(h.fontSize*b.scale()));g.setTextBaseline(javafx.geometry.VPos.TOP);
@@ -204,8 +213,8 @@ public final class Editor extends ViewScript {
         }catch(Exception e){message("Falha ao importar imagem: "+e.getMessage());return null;}
     }
     private void inspect(){set("hudSelected",false);set("worldSelected",true);if(selected==null)return;set("name",selected.name);set("x",""+selected.x);set("y",""+selected.y);set("width",""+selected.width);set("height",""+selected.height);set("color",selected.color);set("speed",""+selected.speed);set("rotation",""+selected.rotation);set("objectScript",selected.scriptClassName.isBlank()?"Script: nenhum":"Script: "+selected.scriptClassName);set("parentName",selected.parentId.isEmpty()?"Pai: nenhum":"Pai: "+Hierarchy.find(scene(),selected.parentId).name);message("Selecionado: "+selected.name+" • controlável="+selected.player+" • colisor="+selected.solid);}
-    private void refresh(){draw();tree.getChildren().clear();for(var e:game.scenes.get(sceneIndex).objects){Button b=new Button((e.parentId.isEmpty()?"":"↳ ")+e.name);b.setMaxWidth(Double.MAX_VALUE);b.setOnAction(event->selectObject(e));tree.getChildren().add(b);}for(var map:game.scenes.get(sceneIndex).tileMaps){Button b=new Button("Mapa • "+map.name);b.setOnAction(e->{stop();selectedMap=map;set("mapSelected",true);set("mapX",""+map.x);set("mapY",""+map.y);set("mapScale",""+map.unitScale);message("Mapa selecionado: "+map.name);});tree.getChildren().add(b);}for(var h:game.scenes.get(sceneIndex).hud){Button b=new Button("HUD • "+(h.type.equals("text")?h.text:h.id));b.setOnAction(event->{stop();pendingParentChild=null;selected=null;selectedHud=h;inspectHud();});tree.getChildren().add(b);}set("projectPath",directory==null?"Projeto: ainda não salvo":"Projeto: "+directory.resolve("game.json").toAbsolutePath().normalize());set("project",game.name+" • "+game.scenes.get(sceneIndex).name+" • inicial: "+game.entrySceneId+" • "+(directory==null?"não salvo":directory));}
-    private void stop(){playGeneration++;compiling=false;if(runtime!=null)runtime.close();runtime=null;if(scriptCompiler!=null){scriptCompiler.close();scriptCompiler=null;}music.close();keys.clear();heldHud.clear();last=0;}
+    private void refresh(){refreshSceneList();draw();tree.getChildren().clear();for(var e:game.scenes.get(sceneIndex).objects){Button b=new Button((e.parentId.isEmpty()?"":"↳ ")+e.name);b.setMaxWidth(Double.MAX_VALUE);b.setOnAction(event->selectObject(e));tree.getChildren().add(b);}for(var map:game.scenes.get(sceneIndex).tileMaps){Button b=new Button("Mapa • "+map.name);b.setOnAction(e->{stop();selectedMap=map;set("mapSelected",true);set("mapX",""+map.x);set("mapY",""+map.y);set("mapScale",""+map.unitScale);message("Mapa selecionado: "+map.name);});tree.getChildren().add(b);}for(var h:game.scenes.get(sceneIndex).hud){Button b=new Button("HUD • "+(h.type.equals("text")?h.text:h.id));b.setOnAction(event->{stop();pendingParentChild=null;selected=null;selectedHud=h;inspectHud();});tree.getChildren().add(b);}set("projectPath",directory==null?"Projeto: ainda não salvo":"Projeto: "+directory.resolve("game.json").toAbsolutePath().normalize());set("project",game.name+" • "+game.scenes.get(sceneIndex).name+" • inicial: "+game.entrySceneId+" • "+(directory==null?"não salvo":directory));}
+    private void stop(){playGeneration++;compiling=false;if(runtime!=null)runtime.close();runtime=null;if(scriptCompiler!=null){scriptCompiler.close();scriptCompiler=null;}music.close();music.pause(false);music.mute(false);keys.clear();heldHud.clear();last=0;}
     public void togglePlay(){
         pendingParentChild=null;
         if(runtime!=null||compiling){stop();message("Play encerrado; edição preservada.");return;}
@@ -226,6 +235,9 @@ public final class Editor extends ViewScript {
         runtime=new megalodonte.engine.Runtime(snapshot,megalodonte.engine.Runtime.reflection(loader),new megalodonte.engine.Runtime.Events(){
             public void log(String text){javafx.application.Platform.runLater(()->{if(!disposed)message(text);});}
             public void playSound(String path){music.sound(pendingAssets.resolve(path,directory));}
+            public void pauseAudio(boolean paused){music.pause(paused);}
+            public void quit(){javafx.application.Platform.runLater(()->stop());}
+            public void muteAudio(boolean muted){music.mute(muted);}
         });canvas.requestFocus();message("Play: cena inicial • WASD/setas e ações HUD.");
     }
     public void newProject(){stop();pendingParentChild=null;game=Game.demo();sceneIndex=0;directory=null;selected=null;selectedHud=null;set("hudSelected",false);set("worldSelected",true);pendingAssets.close();images.clear();refresh();inspectScene();}
@@ -272,7 +284,17 @@ public final class Editor extends ViewScript {
         try{recentProject.rememberSaved(directory.resolve("game.json"));message("Projeto salvo.");}
         catch(Exception preferenceError){message("Projeto salvo; não foi possível guardar o caminho para restauração: "+preferenceError.getMessage());}}catch(Exception e){message("Falha ao salvar: "+e.getMessage());}}
     public void addScene(){stop();pendingParentChild=null;var s=new Game.Scene();s.id=UUID.randomUUID().toString();s.name="Cena "+(game.scenes.size()+1);game.scenes.add(s);sceneIndex=game.scenes.size()-1;selected=null;selectedHud=null;set("hudSelected",false);set("worldSelected",true);refresh();inspectScene();}
-    public void nextScene(){stop();pendingParentChild=null;sceneIndex=(sceneIndex+1)%game.scenes.size();selected=null;selectedHud=null;set("hudSelected",false);set("worldSelected",true);refresh();inspectScene();}
+    private void refreshSceneList(){
+        if(sceneList==null)return;updatingSceneList=true;
+        try{if(!sceneList.getItems().equals(game.scenes))sceneList.getItems().setAll(game.scenes);sceneList.getSelectionModel().select(sceneIndex);sceneList.refresh();}
+        finally{updatingSceneList=false;}
+    }
+    private void selectScene(int index){
+        if(index==sceneIndex)return;
+        stop();if(!commitScene()||!commitMapInspector()||!commitObjectInspector()||!commitHudInspector()){refreshSceneList();return;}
+        pendingParentChild=null;sceneIndex=index;selected=null;selectedHud=null;selectedMap=null;set("mapSelected",false);set("hudSelected",false);set("worldSelected",true);refresh();inspectScene();sceneList.scrollTo(index);
+    }
+    public void nextScene(){selectScene((sceneIndex+1)%game.scenes.size());}
     public void setEntry(){game.entrySceneId=game.scenes.get(sceneIndex).id;refresh();}
     public void addObject(){stop();pendingParentChild=null;selectedHud=null;selected=new Game.Entity();game.scenes.get(sceneIndex).objects.add(selected);refresh();inspect();}
     public void deleteObject(){stop();if(selectedHud!=null){game.scenes.get(sceneIndex).hud.remove(selectedHud);selectedHud=null;set("hudSelected",false);set("worldSelected",true);refresh();return;}if(selected!=null&&scene().camera.targetId.equals(selected.id)){scene().camera.targetId="";scene().camera.mode="fixed";inspectScene();}if(selected!=null)Hierarchy.remove(game.scenes.get(sceneIndex),selected);selected=null;pendingParentChild=null;refresh();}
@@ -348,17 +370,19 @@ public final class Editor extends ViewScript {
     public void openProjectFolder(){if(!ensureProject())return;launchExternal(System.getProperty("os.name").toLowerCase().contains("win")?"explorer":System.getProperty("os.name").toLowerCase().contains("mac")?"open":"xdg-open");}
     public void openProjectIde(){if(!ensureProject())return;try{ScriptCompiler.prepareIde(directory);var dialog=new TextInputDialog("code");dialog.setTitle("Abrir na IDE");dialog.setHeaderText("Executável da IDE (code, idea, codium ou caminho completo)");dialog.showAndWait().ifPresent(this::launchExternal);}catch(Exception e){message(e.getMessage());}}
     private void launchExternal(String executable){try{if(executable.isBlank())return;new ProcessBuilder(executable,directory.toAbsolutePath().toString()).start();}catch(Exception e){message("Não foi possível abrir: "+e.getMessage());}}
-    public void exportAndroid(){
-        if(androidBuild!=null&&androidBuild.isAlive()){message("Build Android já está em andamento.");return;}
+    public void exportAndroid(){exportGame("Android","build-android.sh");}
+    public void exportDesktop(){exportGame("Desktop","build-desktop.sh");}
+    private void exportGame(String platform,String scriptName){
+        if(androidBuild!=null&&androidBuild.isAlive()){message("Uma build já está em andamento.");return;}
         saveProject();if(!saved)return;
-        Path script=Path.of(System.getProperty("engine.home","."),"scripts/build-android.sh").toAbsolutePath();
+        Path script=Path.of(System.getProperty("engine.home","."),"scripts",scriptName).toAbsolutePath();
         if(!Files.isRegularFile(script)){message("Script de build não encontrado. Configure -Dengine.home com a pasta da engine.");return;}
         try{
-            Path log=directory.resolve("build/android-build.log");Files.createDirectories(log.getParent());
+            Path log=directory.resolve("build/"+platform.toLowerCase(Locale.ROOT)+"-build.log");Files.createDirectories(log.getParent());
             androidBuild=new ProcessBuilder("bash",script.toString(),directory.toString()).redirectErrorStream(true).redirectOutput(log.toFile()).start();
-            Process process=androidBuild;Path exported=directory.resolve("build/android/game-debug.apk");
-            message("Compilando Android… log: "+log);
-            Thread worker=new Thread(()->{try{int code=process.waitFor();javafx.application.Platform.runLater(()->{if(!disposed)message(code==0?"APK gerado: "+exported:"Build Android falhou. Consulte "+log);});}catch(InterruptedException e){Thread.currentThread().interrupt();}},"android-export");
+            Process process=androidBuild;Path exported=directory.resolve("build/"+platform.toLowerCase(Locale.ROOT));
+            message("Compilando "+platform+"… log: "+log);
+            Thread worker=new Thread(()->{try{int code=process.waitFor();javafx.application.Platform.runLater(()->{if(!disposed)message(code==0?platform+" gerado em "+exported+" • pasta aberta no explorador":"Build "+platform+" falhou. Consulte "+log);});}catch(InterruptedException e){Thread.currentThread().interrupt();}},"game-export");
             worker.setDaemon(true);worker.start();
         }catch(Exception e){message("Falha ao iniciar build: "+e.getMessage());}
     }

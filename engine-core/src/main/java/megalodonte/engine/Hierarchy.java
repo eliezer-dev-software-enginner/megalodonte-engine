@@ -22,6 +22,7 @@ public final class Hierarchy {
         }return false;
     }
     public static Pose pose(Game.Scene scene,Game.Entity entity) {
+        if(entity.parentId.isEmpty())return new Pose(entity.x,entity.y,entity.rotation);
         List<Game.Entity> chain=new ArrayList<>();Set<String> seen=new HashSet<>();var current=entity;
         while(true){if(!seen.add(current.id))throw new IllegalArgumentException("Ciclo de objetos");chain.add(current);if(current.parentId.isEmpty())break;current=find(scene,current.parentId);}
         Pose result=new Pose(current.x,current.y,current.rotation);

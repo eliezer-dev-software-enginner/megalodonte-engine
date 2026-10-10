@@ -9,7 +9,15 @@ public final class GameContext {
     public Game.Hud hud(){if(hud==null)throw new IllegalStateException("Este script não pertence a uma HUD");return hud;}
     public Game.Entity findObject(String idOrName){return scene().objects.stream().filter(e->e.id.equals(idOrName)||e.name.equals(idOrName)).findFirst().orElseThrow();}
     public Game.Hud findHud(String id){return scene().hud.stream().filter(e->e.id.equals(id)).findFirst().orElseThrow();}
-    public void move(double x,double y){runtime.moveObject(object(),x,y);}
+    public Runtime.Movement move(double x,double y){return runtime.moveObject(object(),x,y);}
+    public Runtime.Movement move(Game.Entity target,double x,double y){return runtime.moveObject(target,x,y);}
+    public boolean overlaps(Game.Entity a,Game.Entity b){return Runtime.overlaps(Runtime.collisionBounds(scene(),a),Runtime.collisionBounds(scene(),b));}
+    public boolean grounded(Game.Entity target){return runtime.blocked(target,0,-0.01);}
+    public void animate(Game.Entity target,String name){Sprites.play(target,name);}
+    public java.util.Map<String,String> state(){return runtime.state;}
+    public void pause(boolean paused){runtime.paused=paused;runtime.events.pauseAudio(paused);}
+    public void quit(){runtime.events.quit();}
+    public void mute(boolean muted){runtime.events.muteAudio(muted);}
     public void setWorldPosition(double x,double y){Hierarchy.setWorldPosition(scene(),object(),x,y);}
     public Hierarchy.Pose worldTransform(){return Hierarchy.pose(scene(),object());}
     public double horizontal(){return runtime.horizontal;}

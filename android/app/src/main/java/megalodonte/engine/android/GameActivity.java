@@ -19,42 +19,46 @@ public final class GameActivity extends Activity {
         host.setOnApplyWindowInsetsListener((root,insets)->{var safe=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());root.setPadding(safe.left,safe.top,safe.right,safe.bottom);return insets;});setContentView(host);host.requestApplyInsets();
     }
     @Override protected void onPause(){super.onPause();if(view!=null){view.active=false;view.clearInput();if(view.music!=null)view.music.pause();}}
-    @Override protected void onResume(){super.onResume();if(view!=null){view.active=true;view.last=0;if(view.music!=null)view.music.start();view.postInvalidateOnAnimation();}}
+    @Override protected void onResume(){super.onResume();if(view!=null){view.active=true;view.last=0;if(view.music!=null&&!view.runtime.paused)view.music.start();view.postInvalidateOnAnimation();}}
     @Override protected void onDestroy(){if(view!=null)view.close();super.onDestroy();}
     private final class GameView extends View {
         final megalodonte.engine.Runtime runtime;
-        final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
+        final Paint paint=new Paint();
         final Map<String,Bitmap> images=new HashMap<>();
         final Map<Integer,String> touchActions=new HashMap<>();
         final Set<String> held=new HashSet<>();
         final List<MediaPlayer> effects=new ArrayList<>();
         MediaPlayer music;String musicScene="";
-        boolean active=true;long last;double dx,dy;
-        GameView(Game game){super(GameActivity.this);
+        boolean muted;boolean audioPaused;boolean active=true;long last;double dx,dy;
+        GameView(Game game){super(GameActivity.this);paint.setFilterBitmap(false);
             runtime=new megalodonte.engine.Runtime(game,megalodonte.engine.Runtime.reflection(getClass().getClassLoader()),new megalodonte.engine.Runtime.Events(){
                 public void log(String message){android.util.Log.i("MegalodonteScript",message);}
                 public void playSound(String asset){sound(asset);}
+                public void quit(){GameActivity.this.finish();}
+                public void muteAudio(boolean value){muted=value;if(music!=null){float v=value?0:(float)runtime.scene.musicVolume;music.setVolume(v,v);}for(var player:effects)player.setVolume(value?0:1,value?0:1);}
+                public void pauseAudio(boolean value){audioPaused=value;if(music!=null){if(value)music.pause();else music.start();}for(var player:effects){if(value)player.pause();else player.start();}}
             });
-            for(var scene:runtime.game.scenes){for(var e:scene.objects)loadImage(e.assetPath);for(var h:scene.hud)loadImage(h.assetPath);for(var map:scene.tileMaps)for(var tile:map.tiles.values())loadImage(tile.assetPath);}
+            for(var scene:runtime.game.scenes){for(var e:scene.objects){loadImage(e.assetPath);for(var animation:e.animations.values())for(var frame:animation.frames)loadImage(frame);}for(var h:scene.hud)loadImage(h.assetPath);for(var map:scene.tileMaps)for(var tile:map.tiles.values())loadImage(tile.assetPath);}
         }
         void loadImage(String path){if(path.isBlank()||images.containsKey(path))return;try(var stream=getAssets().open(path)){Bitmap bitmap=BitmapFactory.decodeStream(stream);if(bitmap!=null)images.put(path,bitmap);}catch(Exception e){android.util.Log.w("Megalodonte",path,e);}}
         MediaPlayer audio(String asset)throws Exception{MediaPlayer player=new MediaPlayer();try(var fd=getAssets().openFd(asset)){player.setDataSource(fd.getFileDescriptor(),fd.getStartOffset(),fd.getLength());player.prepare();}catch(Exception e){player.release();throw e;}return player;}
-        void sound(String asset){try{MediaPlayer player=audio(asset);effects.add(player);player.setOnCompletionListener(done->{effects.remove(done);done.release();});player.start();}catch(Exception e){android.util.Log.e("MegalodonteAudio",asset,e);}}
-        void updateMusic(){if(runtime.scene.id.equals(musicScene))return;if(music!=null){music.release();music=null;}musicScene=runtime.scene.id;
-            if(runtime.scene.musicAssetPath.isBlank())return;try{music=audio(runtime.scene.musicAssetPath);music.setLooping(runtime.scene.musicLoop);float volume=(float)runtime.scene.musicVolume;music.setVolume(volume,volume);music.start();}catch(Exception e){android.util.Log.e("MegalodonteAudio",runtime.scene.musicAssetPath,e);}}
+        void sound(String asset){if(muted||audioPaused)return;try{MediaPlayer player=audio(asset);effects.add(player);player.setOnCompletionListener(done->{effects.remove(done);done.release();});player.start();}catch(Exception e){android.util.Log.e("MegalodonteAudio",asset,e);}}
+        void updateMusic(){if(music!=null){float v=muted?0:(float)runtime.scene.musicVolume;music.setVolume(v,v);}String key=runtime.scene.id+"|"+runtime.scene.musicAssetPath;if(key.equals(musicScene))return;if(music!=null){music.release();music=null;}musicScene=key;
+            if(runtime.scene.musicAssetPath.isBlank())return;try{music=audio(runtime.scene.musicAssetPath);music.setLooping(runtime.scene.musicLoop);float volume=muted?0:(float)runtime.scene.musicVolume;music.setVolume(volume,volume);if(!audioPaused)music.start();}catch(Exception e){android.util.Log.e("MegalodonteAudio",runtime.scene.musicAssetPath,e);}}
         @Override protected void onDraw(Canvas canvas){
             if(!active)return;
             long now=System.nanoTime();try{runtime.update(last==0?0:(now-last)/1e9,dx,dy);updateMusic();}catch(Exception e){active=false;clearInput();android.widget.Toast.makeText(GameActivity.this,"Erro no script: "+e.getMessage(),android.widget.Toast.LENGTH_LONG).show();return;}last=now;
             var scene=runtime.scene;var view=CameraView.of(scene.camera,getWidth(),getHeight());float scale=(float)view.scale(),ox=(float)view.originX(),oy=(float)view.originY();
             canvas.drawColor(Color.BLACK);canvas.save();canvas.clipRect((float)view.screenX(view.left()),(float)view.screenY(view.bottom()+view.height()),(float)view.screenX(view.left()+view.width()),(float)view.screenY(view.bottom()));paint.setColor(Color.parseColor(scene.background));paint.setAlpha(255);canvas.drawRect(ox,oy-(float)scene.worldHeight*scale,ox+(float)scene.worldWidth*scale,oy,paint);
-            TileDraw.render(scene,view,(tile,x,y,w,h,alpha,a,b,c,d)->{Bitmap image=images.get(tile.assetPath);if(image==null)return;canvas.save();canvas.translate((float)(x+w/2),(float)(y+h/2));canvas.scale((float)w,(float)h);Matrix matrix=new Matrix();matrix.setValues(new float[]{(float)a,(float)c,0,(float)b,(float)d,0,0,0,1});canvas.concat(matrix);paint.setAlpha((int)(alpha*255));canvas.drawBitmap(image,new Rect(tile.sourceX,tile.sourceY,tile.sourceX+tile.width,tile.sourceY+tile.height),new RectF(-.5f,-.5f,.5f,.5f),paint);canvas.restore();});paint.setAlpha(255);
-            for(var e:scene.objects){var pose=Hierarchy.pose(scene,e);RectF rect=new RectF(ox+(float)pose.x()*scale,oy-(float)(pose.y()+e.height)*scale,ox+(float)(pose.x()+e.width)*scale,oy-(float)pose.y()*scale);canvas.save();canvas.rotate((float)(pose.rotation()%360),rect.centerX(),rect.centerY());Bitmap image=images.get(e.assetPath);if(image!=null)canvas.drawBitmap(image,null,rect,paint);else{paint.setColor(Color.parseColor(e.color));canvas.drawRect(rect,paint);}canvas.restore();}
+            TileDraw.render(scene,view,(tile,x,y,w,h,alpha,a,b,c,d)->{Bitmap image=images.get(tile.assetPath);if(image==null)return;canvas.save();float left=(float)Math.floor(x),top=(float)Math.floor(y),right=(float)Math.ceil(x+w),bottom=(float)Math.ceil(y+h);canvas.translate((left+right)/2,(top+bottom)/2);canvas.scale(right-left,bottom-top);Matrix matrix=new Matrix();matrix.setValues(new float[]{(float)a,(float)c,0,(float)b,(float)d,0,0,0,1});canvas.concat(matrix);paint.setAlpha((int)(alpha*255));canvas.drawBitmap(image,new Rect(tile.sourceX,tile.sourceY,tile.sourceX+tile.width,tile.sourceY+tile.height),new RectF(-.5f,-.5f,.5f,.5f),paint);canvas.restore();});paint.setAlpha(255);
+            for(var e:scene.objects){if(!e.visible)continue;var pose=Hierarchy.pose(scene,e);RectF rect=new RectF(ox+(float)pose.x()*scale,oy-(float)(pose.y()+e.height)*scale,ox+(float)(pose.x()+e.width)*scale,oy-(float)pose.y()*scale);canvas.save();canvas.rotate((float)(pose.rotation()%360),rect.centerX(),rect.centerY());if(e.flipX)canvas.scale(-1,1,rect.centerX(),rect.centerY());Bitmap image=images.get(Sprites.asset(e));if(image!=null)canvas.drawBitmap(image,null,rect,paint);else{paint.setColor(Color.parseColor(e.color));canvas.drawRect(rect,paint);}canvas.restore();}
             canvas.restore();
-            for(var hud:scene.hud){var b=HudLayout.resolve(hud,getWidth(),getHeight());canvas.save();canvas.clipRect((float)b.x(),(float)b.y(),(float)(b.x()+b.width()),(float)(b.y()+b.height()));
+            for(var hud:scene.hud){if(!hud.visible)continue;loadImage(hud.assetPath);var b=HudLayout.resolve(hud,getWidth(),getHeight());canvas.save();canvas.clipRect((float)b.x(),(float)b.y(),(float)(b.x()+b.width()),(float)(b.y()+b.height()));
                 RectF rect=new RectF((float)b.x(),(float)b.y(),(float)(b.x()+b.width()),(float)(b.y()+b.height()));
-                if(hud.type.equals("button")){paint.setColor(Color.rgb(36,88,120));canvas.drawRoundRect(rect,8,8,paint);}
+                if(hud.type.equals("button")&&hud.assetPath.isBlank()){paint.setColor(Color.rgb(36,88,120));canvas.drawRoundRect(rect,8,8,paint);}
+                if(hud.type.equals("button")&&!hud.assetPath.isBlank()){Bitmap button=images.get(hud.assetPath);if(button!=null)canvas.drawBitmap(button,null,rect,paint);}
                 paint.setColor(Color.parseColor(hud.color));
-                if(hud.type.equals("text")||hud.type.equals("button")){paint.setTextSize((float)(hud.fontSize*b.scale()));canvas.drawText(hud.text,(float)b.x(),(float)b.y()-paint.getFontMetrics().top,paint);}
+                if(hud.type.equals("text")||hud.type.equals("button")){paint.setAntiAlias(true);paint.setTextSize((float)(hud.fontSize*b.scale()));canvas.drawText(hud.text,(float)b.x(),(float)b.y()-paint.getFontMetrics().top,paint);paint.setAntiAlias(false);}
                 else{Bitmap image=images.get(hud.assetPath);if(image!=null)canvas.drawBitmap(image,null,rect,paint);else canvas.drawRect(rect,paint);}canvas.restore();
             }
             if(runtime.fadeAlpha()>0){paint.setColor(Color.argb((int)(runtime.fadeAlpha()*255),0,0,0));canvas.drawRect(0,0,getWidth(),getHeight(),paint);}
@@ -63,7 +67,7 @@ public final class GameActivity extends Activity {
         @Override public boolean onTouchEvent(MotionEvent event){
             if(event.getActionMasked()==MotionEvent.ACTION_CANCEL){clearInput();return true;}
             if(event.getActionMasked()==MotionEvent.ACTION_DOWN||event.getActionMasked()==MotionEvent.ACTION_POINTER_DOWN){int i=event.getActionIndex();String action="";
-                for(int j=runtime.scene.hud.size()-1;j>=0;j--){var h=runtime.scene.hud.get(j);if(h.type.equals("button")&&HudLayout.resolve(h,getWidth(),getHeight()).contains(event.getX(i),event.getY(i))){action=h.action.isBlank()?h.id:h.action;break;}}
+                for(int j=runtime.scene.hud.size()-1;j>=0;j--){var h=runtime.scene.hud.get(j);if(h.visible&&h.type.equals("button")&&HudLayout.resolve(h,getWidth(),getHeight()).contains(event.getX(i),event.getY(i))){action=h.action.isBlank()?h.id:h.action;break;}}
                 touchActions.put(event.getPointerId(i),action);
             }
             int up=(event.getActionMasked()==MotionEvent.ACTION_UP||event.getActionMasked()==MotionEvent.ACTION_POINTER_UP)?event.getActionIndex():-1;

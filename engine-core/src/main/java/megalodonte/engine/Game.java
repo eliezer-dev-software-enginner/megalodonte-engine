@@ -5,6 +5,7 @@ public final class Game {
     public int version = 1;
     public String name = "Meu jogo", entrySceneId = "scene-1";
     public String lastEditedSceneId = "";
+    public String applicationId = "megalodonte.engine.game";
     public List<Scene> scenes = new ArrayList<>();
     public static final class Scene {
         public String id = "scene-1", name = "Cena 1", background = "#172638";
@@ -21,14 +22,25 @@ public final class Game {
         public String id = UUID.randomUUID().toString(), name = "Objeto", color = "#56b6c2", assetPath = "";
         public String parentId = "", scriptClassName = "";
         public double x = 2, y = 2, width = 1, height = 1, speed = 4, rotation = 0;
-        public boolean solid = true, player = false;
+        public boolean solid = true, player = false, visible = true, flipX = false;
+        public double colliderOffsetX, colliderOffsetY, colliderWidth, colliderHeight;
+        public Map<String, Animation> animations = new LinkedHashMap<>();
+        public String animation = "";
+        public double animationTime;
+        public Map<String, String> properties = new LinkedHashMap<>();
         public Entity copy() { return Codec.GSON.fromJson(Codec.GSON.toJson(this), Entity.class); }
+    }
+    public static final class Animation {
+        public List<String> frames = new ArrayList<>();
+        public double fps = 10;
+        public boolean loop = true;
     }
     /** HUD dimensions/offsets use a 1280x720 reference, origin at top left. */
     public static final class Hud {
         public String id = UUID.randomUUID().toString(), type = "text", text = "Pontuação: 0";
         public String assetPath = "", color = "#ffffff", horizontalAnchor = "left", verticalAnchor = "top";
         public String scriptClassName = "", action = "";
+        public boolean visible = true;
         public double offsetX = 24, offsetY = 24, width = 300, height = 48, fontSize = 32;
         public Hud copy() { return Codec.GSON.fromJson(Codec.GSON.toJson(this), Hud.class); }
     }

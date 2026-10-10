@@ -91,3 +91,15 @@ bash scripts/build-android.sh /caminho/novo/exemplo
 ```
 
 O gerador recusa sobrescrever `game.json`, cria mapa/tileset, WAV de demonstração, colisores, HUD de direção/posição, script Player e câmera follow/fade. Compila e executa um trecho do script como verificação. Abra o arquivo criado na engine para experimentar. Sem física de gravidade/salto automática; o exemplo move o jogador nos dois eixos.
+
+## Sprites animados e física de plataforma
+
+Entity possui `animations` (nome → frames de assets, fps e loop), `animation`, `animationTime`, `visible` e `flipX`. `context.animate(entity, "walk")` troca o estado e reinicia o relógio apenas quando o nome muda. Sprites.asset resolve o frame nos dois hosts; o editor usa a mesma resolução. O relógio pertence à cópia de execução.
+
+`colliderOffsetX/Y` e `colliderWidth/Height` permitem separar o corpo do sprite; tamanho 0 usa o tamanho visual. Colisores invisíveis continuam bloqueando. `context.move(entity, dx, dy)` retorna Movement com deslocamento efetivo e bloqueio por eixo, permitindo implementar gravidade e zerar velocidade ao pousar. A resolução aproxima a borda livre para evitar que o personagem pare com uma folga visível. `context.grounded(entity)` testa contato abaixo. `context.overlaps(a,b)` testa caixas de mundo para moedas/perigos.
+
+`context.pause(true)` congela movimento automático, relógios e animações, mantendo callbacks de scripts com delta zero para que menus possam processar input e retomar. Pausa/mute são encaminhados aos players de áudio dos hosts. `context.state()` preserva valores de sessão entre cenas. Trocar ou reiniciar cena restaura seus elementos a partir do documento inicial; isso recupera moedas/objetos alterados e evita que reinícios herdem estado da tentativa anterior.
+
+A adaptação Alex vs Bus em `../../games/alex-vs-bus` usa essas APIs, 13 fases originais, câmera, tilemaps, áudio, HUD e scripts nos dois hosts. Consulte também [exportação Desktop](DESKTOP_EXPORT.md).
+
+`context.quit()` solicita sair ao host (fecha o aplicativo no Desktop/Android; encerra Play no editor). Botões com `assetPath` desenham o PNG do projeto e mantêm sua ação; os menus podem alterar `visible` e `assetPath` em execução. Mudanças de `musicAssetPath` dentro da mesma cena também trocam a música nos dois hosts.

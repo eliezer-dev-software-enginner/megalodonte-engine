@@ -8,6 +8,7 @@ public final class Codec {
     }
     public static void validate(Game game) {
         if (game == null || game.version != 1 || game.scenes == null || game.scenes.isEmpty()) throw new IllegalArgumentException("Documento de jogo inválido ou versão incompatível");
+        if(game.applicationId==null||!game.applicationId.matches("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+"))throw new IllegalArgumentException("applicationId inválido");
         Set<String> scenes = new HashSet<>();
         for (Game.Scene scene : game.scenes) {
             if (scene == null || scene.id == null || !scenes.add(scene.id) || scene.objects == null || !positive(scene.worldWidth) || !positive(scene.worldHeight)) throw new IllegalArgumentException("Cena inválida");
@@ -31,6 +32,10 @@ public final class Codec {
                 if (e == null || e.id == null || !objects.add(e.id) || !positive(e.width) || !positive(e.height) || !Double.isFinite(e.x) || !Double.isFinite(e.y) || !Double.isFinite(e.rotation) || !Double.isFinite(e.speed) || e.speed < 0) throw new IllegalArgumentException("Objeto inválido");
                 if (e.assetPath == null || e.assetPath.startsWith("/") || e.assetPath.contains("..") || e.assetPath.contains("\\") || e.assetPath.contains(":")) throw new IllegalArgumentException("Asset deve ter caminho relativo seguro");
                 if (e.color == null || !e.color.matches("#[0-9a-fA-F]{6}")) throw new IllegalArgumentException("Cor inválida");
+            }
+            for(var e:scene.objects){
+                if(e.animation==null||e.animations==null||e.properties==null||!Double.isFinite(e.animationTime)||e.animationTime<0||!Double.isFinite(e.colliderOffsetX)||!Double.isFinite(e.colliderOffsetY)||!Double.isFinite(e.colliderWidth)||!Double.isFinite(e.colliderHeight)||e.colliderWidth<0||e.colliderHeight<0)throw new IllegalArgumentException("Sprite/colisor inválido");
+                for(var animation:e.animations.values()){if(animation==null||animation.frames==null||animation.frames.isEmpty()||!positive(animation.fps))throw new IllegalArgumentException("Animação inválida");for(var frame:animation.frames)validateAsset(frame);}
             }
             Hierarchy.validate(scene);
             if(!scene.camera.targetId.isEmpty() && scene.objects.stream().noneMatch(e->e.id.equals(scene.camera.targetId)))throw new IllegalArgumentException("Alvo de câmera inexistente");
