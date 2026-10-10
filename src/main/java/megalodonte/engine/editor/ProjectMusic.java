@@ -13,7 +13,7 @@ final class ProjectMusic implements AutoCloseable {
     void pause(boolean value){paused=value;if(music!=null){if(value)music.pause();else music.play();}for(var player:effects){if(value)player.pause();else player.play();}}
     void update(Game.Scene scene,Function<String,Path> resolve,java.util.function.Consumer<String> errors){
         volume=scene.musicVolume;if(music!=null)music.setVolume(muted?0:volume);
-        String key=scene.id+"|"+scene.musicAssetPath;if(key.equals(sceneId))return;close();sceneId=key;
+        String key=MusicTrack.key(scene);if(key.equals(sceneId))return;close();sceneId=key;
         if(scene.musicAssetPath.isBlank())return;
         try{Path path=resolve.apply(scene.musicAssetPath);if(path==null)throw new IllegalArgumentException("Música não encontrada");
             music=new MediaPlayer(new Media(path.toUri().toString()));music.setVolume(muted?0:scene.musicVolume);music.setCycleCount(scene.musicLoop?MediaPlayer.INDEFINITE:1);

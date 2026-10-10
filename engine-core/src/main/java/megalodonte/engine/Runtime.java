@@ -5,7 +5,7 @@ public final class Runtime implements AutoCloseable {
     private final Game baseline;
     public Game.Scene scene;
     public interface ScriptFactory { GameScript create(String className) throws Exception; }
-    public interface Events { default void log(String message){} default void playSound(String assetPath){} default void pauseAudio(boolean paused){} default void muteAudio(boolean muted){} default void quit(){} }
+    public interface Events { default void log(String message){} default void playSound(String assetPath){} default void pauseAudio(boolean paused){} default void muteAudio(boolean muted){} default void quit(){} default java.util.Map<String,String> loadState(){return java.util.Map.of();} default void saveState(java.util.Map<String,String> state){} }
     private final ScriptFactory factory;
     public final Events events;
     public double horizontal, vertical, elapsed;
@@ -20,7 +20,7 @@ public final class Runtime implements AutoCloseable {
     public Runtime(Game source,ScriptFactory factory,Events events){
         baseline=Codec.copy(source);game=Codec.copy(source);this.factory=factory;this.events=events;
         scene=game.scenes.stream().filter(s->s.id.equals(game.entrySceneId)).findFirst().orElseThrow();
-        startScripts();CameraView.update(scene,0);
+        state.putAll(events.loadState());startScripts();CameraView.update(scene,0);
     }
     public static ScriptFactory reflection(ClassLoader loader){return name->(GameScript)Class.forName(name,true,loader).getDeclaredConstructor().newInstance();}
     private void attach(String name,Game.Entity e,Game.Hud h){if(name.isBlank())return;

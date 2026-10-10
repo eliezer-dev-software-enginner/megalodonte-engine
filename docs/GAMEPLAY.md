@@ -107,3 +107,5 @@ A adaptação Alex vs Bus em `../../games/alex-vs-bus` usa essas APIs, 13 fases 
 ## Âncoras da HUD
 
 `referenceArea` escolhe a base das âncoras: `viewport` (padrão compatível, tela segura após insets) ou `content` (área 1280×720 ajustada e centralizada). `left/top` mede a margem da esquerda/topo dessa área; `right/bottom` mede a margem da direita/base; `center` mede o deslocamento a partir do centro. Menus usam conteúdo; controles nas bordas da tela usam viewport. No inspetor, Área da HUD alterna a referência. Mudar a referência ou a âncora preserva a posição visual e recalcula os offsets; arrastar usa a mesma transformação nos hosts Desktop/Android.
+
+`GameContext.saveState()` salva o estado do jogador; os hosts Desktop e Android o restauram antes de `onStart`. No editor o perfil é separado do jogador Desktop. Scripts devem salvar apenas dados persistentes. A música continua entre cenas quando asset e repetição são iguais. `camera.viewportTop` reserva de 0 a 719 pixels da referência 1280×720 acima da projeção do mundo; configure em Cena → opções.

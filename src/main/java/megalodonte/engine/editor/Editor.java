@@ -255,11 +255,14 @@ public final class Editor extends ViewScript {
     private void startPlay(Game snapshot,ScriptCompiler compiler){
         scriptCompiler=compiler;
         ClassLoader loader=compiler==null?getClass().getClassLoader():compiler.loader;
+        var playerState=new PlayerState(snapshot.applicationId+"/editor/"+directory);
         runtime=new megalodonte.engine.Runtime(snapshot,megalodonte.engine.Runtime.reflection(loader),new megalodonte.engine.Runtime.Events(){
             public void log(String text){javafx.application.Platform.runLater(()->{if(!disposed)message(text);});}
             public void playSound(String path){music.sound(pendingAssets.resolve(path,directory));}
             public void pauseAudio(boolean paused){music.pause(paused);}
             public void quit(){javafx.application.Platform.runLater(()->stop());}
+            public java.util.Map<String,String> loadState(){return playerState.load();}
+            public void saveState(java.util.Map<String,String> state){playerState.save(state);}
             public void muteAudio(boolean muted){music.mute(muted);}
         });canvas.requestFocus();message("Play: cena inicial • WASD/setas e ações HUD.");
     }

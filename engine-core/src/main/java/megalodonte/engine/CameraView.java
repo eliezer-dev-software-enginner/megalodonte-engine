@@ -3,10 +3,12 @@ package megalodonte.engine;
 public record CameraView(double scale,double originX,double originY,double left,double bottom,double width,double height) {
     public static CameraView of(Game.Camera camera,double pixelWidth,double pixelHeight) {
         double width=camera.width/camera.zoom,height=camera.height/camera.zoom;
-        double scale=Math.max(0,Math.min(pixelWidth/width,pixelHeight/height));
+        double top=Math.min(pixelHeight,camera.viewportTop*Math.min(pixelWidth/1280,pixelHeight/720));
+        double availableHeight=pixelHeight-top;
+        double scale=Math.max(0,Math.min(pixelWidth/width,availableHeight/height));
         double left=camera.x-width/2,bottom=camera.y-height/2;
         return new CameraView(scale,(pixelWidth-width*scale)/2-left*scale,
-            (pixelHeight-height*scale)/2+(bottom+height)*scale,left,bottom,width,height);
+            top+(availableHeight-height*scale)/2+(bottom+height)*scale,left,bottom,width,height);
     }
     public double screenX(double x){return originX+x*scale;}
     public double screenY(double y){return originY-y*scale;}

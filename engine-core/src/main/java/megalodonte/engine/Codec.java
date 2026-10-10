@@ -38,6 +38,7 @@ public final class Codec {
                 if(e.animation==null||e.animations==null||e.properties==null||!Double.isFinite(e.animationTime)||e.animationTime<0||!Double.isFinite(e.colliderOffsetX)||!Double.isFinite(e.colliderOffsetY)||!Double.isFinite(e.colliderWidth)||!Double.isFinite(e.colliderHeight)||e.colliderWidth<0||e.colliderHeight<0)throw new IllegalArgumentException("Sprite/colisor inválido");
                 for(var animation:e.animations.values()){if(animation==null||animation.frames==null||animation.frames.isEmpty()||!positive(animation.fps))throw new IllegalArgumentException("Animação inválida");for(var frame:animation.frames)validateAsset(frame);}
             }
+            if(!Double.isFinite(scene.camera.viewportTop)||scene.camera.viewportTop<0||scene.camera.viewportTop>=720)throw new IllegalArgumentException("Margem superior da câmera inválida");
             Hierarchy.validate(scene);
             if(!scene.camera.targetId.isEmpty() && scene.objects.stream().noneMatch(e->e.id.equals(scene.camera.targetId)))throw new IllegalArgumentException("Alvo de câmera inexistente");
             if (scene.background == null || !scene.background.matches("#[0-9a-fA-F]{6}")) throw new IllegalArgumentException("Fundo inválido");

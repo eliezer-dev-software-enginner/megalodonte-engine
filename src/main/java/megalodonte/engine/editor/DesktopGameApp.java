@@ -29,11 +29,14 @@ public final class DesktopGameApp extends Application {
         else if(!getParameters().getRaw().isEmpty())project=Path.of(getParameters().getRaw().getFirst()).toAbsolutePath();
         else project=Path.of(DesktopLauncher.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getParent().resolve("game");
         var game=Codec.read(Files.readString(project.resolve("game.json")));
+        var playerState=new PlayerState(game.applicationId);
         runtime=new megalodonte.engine.Runtime(game,megalodonte.engine.Runtime.reflection(getClass().getClassLoader()),new megalodonte.engine.Runtime.Events(){
             public void playSound(String asset){audio.sound(project.resolve(asset));}
             public void log(String message){System.out.println(message);}
             public void pauseAudio(boolean value){audio.pause(value);}
             public void quit(){javafx.application.Platform.exit();}
+            public java.util.Map<String,String> loadState(){return playerState.load();}
+            public void saveState(java.util.Map<String,String> state){playerState.save(state);}
             public void muteAudio(boolean value){audio.mute(value);}
         });
         var canvas=new Canvas();var root=new StackPane(canvas);canvas.widthProperty().bind(root.widthProperty());canvas.heightProperty().bind(root.heightProperty());

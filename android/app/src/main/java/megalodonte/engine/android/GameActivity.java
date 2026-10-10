@@ -16,7 +16,7 @@ public final class GameActivity extends Activity {
     private void setSafeContent(View content){
         var host=new android.widget.FrameLayout(this);host.setBackgroundColor(Color.BLACK);
         host.addView(content,new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
-        host.setOnApplyWindowInsetsListener((root,insets)->{var safe=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());root.setPadding(safe.left,safe.top,safe.right,safe.bottom);return insets;});setContentView(host);host.requestApplyInsets();
+        host.setOnApplyWindowInsetsListener((root,insets)->{var safe=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());root.setPadding(safe.left,safe.top,safe.right,safe.bottom);return insets;});setContentView(host);host.requestApplyInsets();host.post(()->{var controller=host.getWindowInsetsController();if(controller!=null){controller.hide(WindowInsets.Type.statusBars());controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);}});
     }
     @Override protected void onPause(){super.onPause();if(view!=null){view.active=false;view.clearInput();if(view.music!=null)view.music.pause();}}
     @Override protected void onResume(){super.onResume();if(view!=null){view.active=true;view.last=0;if(view.music!=null&&!view.runtime.paused)view.music.start();view.postInvalidateOnAnimation();}}
@@ -32,6 +32,8 @@ public final class GameActivity extends Activity {
         boolean muted;boolean audioPaused;boolean active=true;long last;double dx,dy;
         GameView(Game game){super(GameActivity.this);paint.setFilterBitmap(false);
             runtime=new megalodonte.engine.Runtime(game,megalodonte.engine.Runtime.reflection(getClass().getClassLoader()),new megalodonte.engine.Runtime.Events(){
+                public java.util.Map<String,String> loadState(){try{var type=new com.google.gson.reflect.TypeToken<java.util.Map<String,String>>(){}.getType();java.util.Map<String,String> state=Codec.GSON.fromJson(getSharedPreferences("game-state",0).getString("state","{}"),type);return state==null?java.util.Map.of():state;}catch(Exception e){return java.util.Map.of();}}
+                public void saveState(java.util.Map<String,String> state){getSharedPreferences("game-state",0).edit().putString("state",Codec.GSON.toJson(state)).apply();}
                 public void log(String message){android.util.Log.i("MegalodonteScript",message);}
                 public void playSound(String asset){sound(asset);}
                 public void quit(){GameActivity.this.finish();}
@@ -43,7 +45,7 @@ public final class GameActivity extends Activity {
         void loadImage(String path){if(path.isBlank()||images.containsKey(path))return;try(var stream=getAssets().open(path)){Bitmap bitmap=BitmapFactory.decodeStream(stream);if(bitmap!=null)images.put(path,bitmap);}catch(Exception e){android.util.Log.w("Megalodonte",path,e);}}
         MediaPlayer audio(String asset)throws Exception{MediaPlayer player=new MediaPlayer();try(var fd=getAssets().openFd(asset)){player.setDataSource(fd.getFileDescriptor(),fd.getStartOffset(),fd.getLength());player.prepare();}catch(Exception e){player.release();throw e;}return player;}
         void sound(String asset){if(muted||audioPaused)return;try{MediaPlayer player=audio(asset);effects.add(player);player.setOnCompletionListener(done->{effects.remove(done);done.release();});player.start();}catch(Exception e){android.util.Log.e("MegalodonteAudio",asset,e);}}
-        void updateMusic(){if(music!=null){float v=muted?0:(float)runtime.scene.musicVolume;music.setVolume(v,v);}String key=runtime.scene.id+"|"+runtime.scene.musicAssetPath;if(key.equals(musicScene))return;if(music!=null){music.release();music=null;}musicScene=key;
+        void updateMusic(){if(music!=null){float v=muted?0:(float)runtime.scene.musicVolume;music.setVolume(v,v);}String key=MusicTrack.key(runtime.scene);if(key.equals(musicScene))return;if(music!=null){music.release();music=null;}musicScene=key;
             if(runtime.scene.musicAssetPath.isBlank())return;try{music=audio(runtime.scene.musicAssetPath);music.setLooping(runtime.scene.musicLoop);float volume=muted?0:(float)runtime.scene.musicVolume;music.setVolume(volume,volume);if(!audioPaused)music.start();}catch(Exception e){android.util.Log.e("MegalodonteAudio",runtime.scene.musicAssetPath,e);}}
         @Override protected void onDraw(Canvas canvas){
             if(!active)return;

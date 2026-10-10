@@ -49,6 +49,7 @@ public final class Game {
         public String mode = "fixed", targetId = "";
         public double x = 8, y = 4.5, width = 16, height = 9, zoom = 1;
         public double followSpeed = 6, deadZoneWidth = 0, deadZoneHeight = 0, fadeSeconds = 0;
+        public double viewportTop = 0;
         public boolean clampToWorld = true;
         public Camera copy() { return Codec.GSON.fromJson(Codec.GSON.toJson(this),Camera.class); }
     }
