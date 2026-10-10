@@ -1216,7 +1216,7 @@
                       {
                         "type": "Button",
                         "props": {
-                          "text": "Visibilidade / tipo / imagem",
+                          "text": "Propriedades / condições HUD",
                           "height": 30
                         },
                         "events": {

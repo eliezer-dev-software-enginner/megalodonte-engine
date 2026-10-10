@@ -25,7 +25,7 @@ final class GamePainter {
             var image=images.apply(Sprites.asset(entity));if(image!=null)g.drawImage(image,-w/2,-h/2,w,h);else{g.setFill(Color.web(entity.color));g.fillRect(-w/2,-h/2,w,h);}g.restore();
         }g.restore();
         for(var hud:scene.hud){if(!hud.visible)continue;var box=HudLayout.resolve(hud,canvas.getWidth(),canvas.getHeight());g.save();g.beginPath();g.rect(box.x(),box.y(),box.width(),box.height());g.clip();
-            var image=images.apply(hud.assetPath);
+            var image=images.apply(HudPresentation.asset(hud));
             if(image!=null)g.drawImage(image,box.x(),box.y(),box.width(),box.height());
             else if(hud.type.equals("button")){g.setFill(Color.web("#245878"));g.fillRoundRect(box.x(),box.y(),box.width(),box.height(),8,8);}
             if(!hud.type.equals("image")){g.setFill(Color.web(hud.color));g.setFont(Font.font("Monospaced",hud.fontSize*box.scale()));g.setTextBaseline(javafx.geometry.VPos.TOP);g.fillText(hud.text,box.x()+4*box.scale(),box.y()+4*box.scale());}

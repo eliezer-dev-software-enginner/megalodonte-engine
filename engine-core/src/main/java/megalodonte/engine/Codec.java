@@ -18,6 +18,7 @@ public final class Codec {
             if(scene.hud == null) throw new IllegalArgumentException("HUD inválida");
             Set<String> hudIds = new HashSet<>();
             for(Game.Hud h : scene.hud) {
+                if(h!=null)HudPresentation.validate(h);
                 if(h == null || h.id == null || h.id.isBlank() || !hudIds.add(h.id)
                         || !Set.of("text","image","button").contains(h.type)
                         || !Set.of("viewport","content").contains(h.referenceArea)

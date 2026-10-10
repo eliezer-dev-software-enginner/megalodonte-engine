@@ -55,3 +55,11 @@ IDs de objetos, cenas e mapas são editáveis nos formulários. Renomear um obje
 Entrada, gravidade, pontuação, checkpoint, tempo, eventos de áudio, troca de animação e estados de sessão são lógica do script. O editor oferece os objetos/dados e a edição Java usados para implementar essa lógica; não há geração automática de comportamento específico de Alex vs Bus. Scripts são copiados ao duplicar cenas, então revise destinos que referenciam outras cenas por ID.
 
 Prévia não substitui Play: a primeira mostra frames do sprite; Play executa lifecycle, scripts, câmera, áudio e colisões no runtime. O relógio da prévia pertence ao editor ou à janela de animações. **Animar cena** reproduz as animações iniciais escolhidas nos objetos; não dispara ações que scripts executariam durante Play. Dados autorados pela interface usam o mesmo Codec, modelos e renderização do Desktop e Android.
+
+## Propriedades e condições das HUDs
+
+Selecione a HUD e abra **Propriedades / condições HUD**. A aba **Propriedades** permite adicionar booleanos, números e textos; o valor é o estado inicial do componente e é copiado ao duplicar. Booleanos são editados por checkbox. Clique em **Aplicar** para atualizar a prévia e salve o projeto.
+
+Em **Condição visual**, indique o nome de uma propriedade booleana, a imagem para `true`, a imagem para `false` e, opcionalmente, **Bloquear clique quando false**. Sem condição, a HUD continua usando a imagem padrão. Condições com propriedades inexistentes ou de outro tipo são rejeitadas antes de aplicar. A avaliação é a mesma no editor, no Desktop e no Android.
+
+Nos scripts Java, use `hud.booleanProperty("liberado", false)` para ler e `hud.setBooleanProperty("liberado", true)` para alterar o valor. As condições atualizam a imagem e a interação sem trocar manualmente o asset. O editor mostra os valores iniciais; o runtime usa uma cópia do documento, por isso o progresso do jogador não modifica a configuração autoral.

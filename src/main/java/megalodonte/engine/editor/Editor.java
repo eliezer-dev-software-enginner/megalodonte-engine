@@ -61,7 +61,7 @@ public final class Editor extends ViewScript {
         canvas.setOnMousePressed(e -> {
             draggingSelection=false;
             canvas.requestFocus();
-            if(runtime!=null){for(var hud:runtime.scene.hud)if(hud.visible&&hud.type.equals("button")&&HudLayout.resolve(hud,canvas.getWidth(),canvas.getHeight()).contains(e.getX(),e.getY())){String action=hud.action.isBlank()?hud.id:hud.action;runtime.setAction(action,true);heldHud.add(action);}return;}
+            if(runtime!=null){for(var hud:runtime.scene.hud)if(hud.visible&&HudPresentation.enabled(hud)&&hud.type.equals("button")&&HudLayout.resolve(hud,canvas.getWidth(),canvas.getHeight()).contains(e.getX(),e.getY())){String action=hud.action.isBlank()?hud.id:hud.action;runtime.setAction(action,true);heldHud.add(action);}return;}
             if(e.getButton()==MouseButton.MIDDLE){panX=e.getX();panY=e.getY();return;}
             if(e.getButton()!=MouseButton.PRIMARY && e.getButton()!=MouseButton.SECONDARY)return;
             draggingSelection=e.getButton()==MouseButton.PRIMARY;
@@ -161,13 +161,13 @@ public final class Editor extends ViewScript {
         var g=canvas.getGraphicsContext2D();
         for(var h:scene().hud){if(!h.visible&&h!=selectedHud)continue;var b=HudLayout.resolve(h,canvas.getWidth(),canvas.getHeight());if(b.scale()<=0)continue;
             g.save();if(!h.visible)g.setGlobalAlpha(.35);g.beginPath();g.rect(b.x(),b.y(),b.width(),b.height());g.clip();
-            if(h.type.equals("button")&&h.assetPath.isBlank()){g.setFill(Color.web("#245878"));g.fillRoundRect(b.x(),b.y(),b.width(),b.height(),8,8);}
-            if(h.type.equals("button")&&!h.assetPath.isBlank()){var buttonImage=assetImage(h.assetPath);if(buttonImage!=null)g.drawImage(buttonImage,b.x(),b.y(),b.width(),b.height());}
+            if(h.type.equals("button")&&HudPresentation.asset(h).isBlank()){g.setFill(Color.web("#245878"));g.fillRoundRect(b.x(),b.y(),b.width(),b.height(),8,8);}
+            if(h.type.equals("button")&&!HudPresentation.asset(h).isBlank()){var buttonImage=assetImage(HudPresentation.asset(h));if(buttonImage!=null)g.drawImage(buttonImage,b.x(),b.y(),b.width(),b.height());}
             g.setFill(Color.web(h.color));
             if(h.type.equals("text")||h.type.equals("button")){
                 g.setFont(javafx.scene.text.Font.font(h.fontSize*b.scale()));g.setTextBaseline(javafx.geometry.VPos.TOP);
                 g.fillText(h.text,b.x(),b.y());
-            }else{Image image=null;if(!h.assetPath.isBlank())image=assetImage(h.assetPath);
+            }else{Image image=null;if(!HudPresentation.asset(h).isBlank())image=assetImage(HudPresentation.asset(h));
                 if(image!=null&&!image.isError())g.drawImage(image,b.x(),b.y(),b.width(),b.height());
                 else{g.fillRect(b.x(),b.y(),b.width(),b.height());}}
             g.restore();

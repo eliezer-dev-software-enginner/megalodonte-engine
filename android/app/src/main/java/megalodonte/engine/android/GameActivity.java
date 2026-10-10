@@ -55,13 +55,13 @@ public final class GameActivity extends Activity {
             TileDraw.render(scene,view,(tile,x,y,w,h,alpha,a,b,c,d)->{Bitmap image=images.get(tile.assetPath);if(image==null)return;canvas.save();float left=(float)Math.floor(x),top=(float)Math.floor(y),right=(float)Math.ceil(x+w),bottom=(float)Math.ceil(y+h);canvas.translate((left+right)/2,(top+bottom)/2);canvas.scale(right-left,bottom-top);Matrix matrix=new Matrix();matrix.setValues(new float[]{(float)a,(float)c,0,(float)b,(float)d,0,0,0,1});canvas.concat(matrix);paint.setAlpha((int)(alpha*255));canvas.drawBitmap(image,new Rect(tile.sourceX,tile.sourceY,tile.sourceX+tile.width,tile.sourceY+tile.height),new RectF(-.5f,-.5f,.5f,.5f),paint);canvas.restore();});paint.setAlpha(255);
             for(var e:scene.objects){if(!e.visible)continue;var pose=Hierarchy.pose(scene,e);RectF rect=new RectF(ox+(float)pose.x()*scale,oy-(float)(pose.y()+e.height)*scale,ox+(float)(pose.x()+e.width)*scale,oy-(float)pose.y()*scale);canvas.save();canvas.rotate((float)(pose.rotation()%360),rect.centerX(),rect.centerY());if(e.flipX)canvas.scale(-1,1,rect.centerX(),rect.centerY());Bitmap image=images.get(Sprites.asset(e));if(image!=null)canvas.drawBitmap(image,null,rect,paint);else{paint.setColor(Color.parseColor(e.color));canvas.drawRect(rect,paint);}canvas.restore();}
             canvas.restore();
-            for(var hud:scene.hud){if(!hud.visible)continue;loadImage(hud.assetPath);var b=HudLayout.resolve(hud,getWidth(),getHeight());canvas.save();canvas.clipRect((float)b.x(),(float)b.y(),(float)(b.x()+b.width()),(float)(b.y()+b.height()));
+            for(var hud:scene.hud){if(!hud.visible)continue;String hudAsset=HudPresentation.asset(hud);loadImage(hudAsset);var b=HudLayout.resolve(hud,getWidth(),getHeight());canvas.save();canvas.clipRect((float)b.x(),(float)b.y(),(float)(b.x()+b.width()),(float)(b.y()+b.height()));
                 RectF rect=new RectF((float)b.x(),(float)b.y(),(float)(b.x()+b.width()),(float)(b.y()+b.height()));
-                if(hud.type.equals("button")&&hud.assetPath.isBlank()){paint.setColor(Color.rgb(36,88,120));canvas.drawRoundRect(rect,8,8,paint);}
-                if(hud.type.equals("button")&&!hud.assetPath.isBlank()){Bitmap button=images.get(hud.assetPath);if(button!=null)canvas.drawBitmap(button,null,rect,paint);}
+                if(hud.type.equals("button")&&hudAsset.isBlank()){paint.setColor(Color.rgb(36,88,120));canvas.drawRoundRect(rect,8,8,paint);}
+                if(hud.type.equals("button")&&!hudAsset.isBlank()){Bitmap button=images.get(hudAsset);if(button!=null)canvas.drawBitmap(button,null,rect,paint);}
                 paint.setColor(Color.parseColor(hud.color));
                 if(hud.type.equals("text")||hud.type.equals("button")){paint.setAntiAlias(true);paint.setTextSize((float)(hud.fontSize*b.scale()));canvas.drawText(hud.text,(float)b.x(),(float)b.y()-paint.getFontMetrics().top,paint);paint.setAntiAlias(false);}
-                else{Bitmap image=images.get(hud.assetPath);if(image!=null)canvas.drawBitmap(image,null,rect,paint);else canvas.drawRect(rect,paint);}canvas.restore();
+                else{Bitmap image=images.get(hudAsset);if(image!=null)canvas.drawBitmap(image,null,rect,paint);else canvas.drawRect(rect,paint);}canvas.restore();
             }
             if(runtime.fadeAlpha()>0){paint.setColor(Color.argb((int)(runtime.fadeAlpha()*255),0,0,0));canvas.drawRect(0,0,getWidth(),getHeight(),paint);}
             postInvalidateOnAnimation();
@@ -69,7 +69,7 @@ public final class GameActivity extends Activity {
         @Override public boolean onTouchEvent(MotionEvent event){
             if(event.getActionMasked()==MotionEvent.ACTION_CANCEL){clearInput();return true;}
             if(event.getActionMasked()==MotionEvent.ACTION_DOWN||event.getActionMasked()==MotionEvent.ACTION_POINTER_DOWN){int i=event.getActionIndex();String action="";
-                for(int j=runtime.scene.hud.size()-1;j>=0;j--){var h=runtime.scene.hud.get(j);if(h.visible&&h.type.equals("button")&&HudLayout.resolve(h,getWidth(),getHeight()).contains(event.getX(i),event.getY(i))){action=h.action.isBlank()?h.id:h.action;break;}}
+                for(int j=runtime.scene.hud.size()-1;j>=0;j--){var h=runtime.scene.hud.get(j);if(h.visible&&HudPresentation.enabled(h)&&h.type.equals("button")&&HudLayout.resolve(h,getWidth(),getHeight()).contains(event.getX(i),event.getY(i))){action=h.action.isBlank()?h.id:h.action;break;}}
                 touchActions.put(event.getPointerId(i),action);
             }
             int up=(event.getActionMasked()==MotionEvent.ACTION_UP||event.getActionMasked()==MotionEvent.ACTION_POINTER_UP)?event.getActionIndex():-1;

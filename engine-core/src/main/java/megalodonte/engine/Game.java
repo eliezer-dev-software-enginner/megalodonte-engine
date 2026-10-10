@@ -44,7 +44,16 @@ public final class Game {
         public String scriptClassName = "", action = "";
         public boolean visible = true;
         public double offsetX = 24, offsetY = 24, width = 300, height = 48, fontSize = 32;
+        public Map<String,com.google.gson.JsonPrimitive> properties = new LinkedHashMap<>();
+        public HudCondition condition = new HudCondition();
+        public boolean booleanProperty(String name,boolean fallback){var value=properties.get(name);return value==null?fallback:value.getAsBoolean();}
+        public void setBooleanProperty(String name,boolean value){properties.put(name,new com.google.gson.JsonPrimitive(value));}
         public Hud copy() { return Codec.GSON.fromJson(Codec.GSON.toJson(this), Hud.class); }
+    }
+    /** Optional boolean property drives presentation independently of scripts. */
+    public static final class HudCondition {
+        public String property = "", trueAssetPath = "", falseAssetPath = "";
+        public boolean disableWhenFalse;
     }
     public static final class Camera {
         public String mode = "fixed", targetId = "";

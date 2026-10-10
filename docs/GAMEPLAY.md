@@ -111,3 +111,5 @@ A adaptação Alex vs Bus em `../../games/alex-vs-bus` usa essas APIs, 13 fases 
 `GameContext.saveState()` salva o estado do jogador; os hosts Desktop e Android o restauram antes de `onStart`. No editor o perfil é separado do jogador Desktop. Scripts devem salvar apenas dados persistentes. A música continua entre cenas quando asset e repetição são iguais. `camera.viewportTop` reserva de 0 a 719 pixels da referência 1280×720 acima da projeção do mundo; configure em Cena → opções.
 
 O ícone pode ser configurado em Projeto → Ícone do aplicativo, com um caminho PNG relativo (por exemplo `assets/icon.png`). Android gera ícones por densidade e adaptativos; sem asset, usa o ícone da engine. Desktop usa o PNG na janela e no pacote Linux.
+
+O host Android usa `sensorLandscape` para permitir as duas posições horizontais. Alterações de orientação e tamanho são tratadas mantendo a instância do runtime e o estado da partida.
