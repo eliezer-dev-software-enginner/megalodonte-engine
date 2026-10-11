@@ -47,6 +47,27 @@ class AlexVsBusTest {
             assertTrue(p.y<bounds.y()-1,"Lateral contact must not cancel gravity, side="+side);
         }
     }
+    @Test void checkpointInsideHoleCannotCreateRespawnLoop(){try(var r=start("normal-3")){
+        var player=Hierarchy.find(r.scene,"alex");
+        var marker=r.scene.objects.stream().filter(e->e.name.equals("Checkpoint")&&Math.abs(e.x-360.125)<.01).findFirst().orElseThrow();
+        marker.x=361.025;player.x=marker.x;player.y=marker.y;
+        for(int i=0;i<100;i++)r.update(.025,0,0);
+        assertTrue(player.x<361,"Unsafe checkpoint must not be used for respawn");
+        double stableX=player.x,stableY=player.y;
+        for(int i=0;i<80;i++)r.update(.025,0,0);
+        assertEquals(stableX,player.x,.001);assertEquals(stableY,player.y,.001,"Respawn must settle on safe ground");
+    }}
+    @Test void thirdLevelCheckpointsHaveStableRespawn(){
+        var markers=game.scenes.stream().filter(s->s.id.equals("normal-3")).findFirst().orElseThrow().objects.stream().filter(e->e.name.equals("Checkpoint")).toList();
+        for(var marker:markers)try(var r=start("normal-3")){
+            var player=Hierarchy.find(r.scene,"alex");player.x=marker.x;player.y=marker.y;r.update(0,0,0);
+            var hole=r.scene.objects.stream().filter(e->e.properties.getOrDefault("kind","").equals("hole")&&e.x>marker.x).findFirst().orElseThrow();
+            player.x=hole.x+1;player.y=0;r.update(0,0,0);
+            for(int i=0;i<80;i++)r.update(.025,0,0);
+            assertTrue(player.y>4.8,"Checkpoint must not respawn inside hole: "+marker.x);
+            assertFalse(r.scene.objects.stream().filter(e->e.properties.getOrDefault("kind","").equals("hole")).anyMatch(e->megalodonte.engine.Runtime.overlaps(megalodonte.engine.Runtime.collisionBounds(r.scene,player),megalodonte.engine.Runtime.collisionBounds(r.scene,e))));
+        }
+    }
     @Test void ordinaryJumpKeepsFloorFramed(){for(var level:game.scenes)if(level.camera.mode.equals("follow")&&level.camera.targetId.equals("alex"))try(var r=start(level.id)){
         assertTrue(r.scene.camera.holdGroundDuringJump,"Ground framing must be saved for "+level.id);
         var player=Hierarchy.find(r.scene,"alex");
