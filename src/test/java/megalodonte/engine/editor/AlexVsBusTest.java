@@ -49,7 +49,7 @@ class AlexVsBusTest {
     }
     @Test void checkpointInsideHoleCannotCreateRespawnLoop(){try(var r=start("normal-3")){
         var player=Hierarchy.find(r.scene,"alex");
-        var marker=r.scene.objects.stream().filter(e->e.name.equals("Checkpoint")&&Math.abs(e.x-360.125)<.01).findFirst().orElseThrow();
+        var marker=r.scene.objects.stream().filter(e->e.name.equals("Checkpoint")&&Math.abs(e.x-367.125)<.01).findFirst().orElseThrow();
         marker.x=361.025;player.x=marker.x;player.y=marker.y;
         for(int i=0;i<100;i++)r.update(.025,0,0);
         assertTrue(player.x<361,"Unsafe checkpoint must not be used for respawn");
@@ -57,16 +57,28 @@ class AlexVsBusTest {
         for(int i=0;i<80;i++)r.update(.025,0,0);
         assertEquals(stableX,player.x,.001);assertEquals(stableY,player.y,.001,"Respawn must settle on safe ground");
     }}
-    @Test void thirdLevelCheckpointsHaveStableRespawn(){
-        var markers=game.scenes.stream().filter(s->s.id.equals("normal-3")).findFirst().orElseThrow().objects.stream().filter(e->e.name.equals("Checkpoint")).toList();
-        for(var marker:markers)try(var r=start("normal-3")){
-            var player=Hierarchy.find(r.scene,"alex");player.x=marker.x;player.y=marker.y;r.update(0,0,0);
-            var hole=r.scene.objects.stream().filter(e->e.properties.getOrDefault("kind","").equals("hole")&&e.x>marker.x).findFirst().orElseThrow();
-            player.x=hole.x+1;player.y=0;r.update(0,0,0);
-            for(int i=0;i<80;i++)r.update(.025,0,0);
-            assertTrue(player.y>4.8,"Checkpoint must not respawn inside hole: "+marker.x);
-            assertFalse(r.scene.objects.stream().filter(e->e.properties.getOrDefault("kind","").equals("hole")).anyMatch(e->megalodonte.engine.Runtime.overlaps(megalodonte.engine.Runtime.collisionBounds(r.scene,player),megalodonte.engine.Runtime.collisionBounds(r.scene,e))));
+    @Test void allCheckpointsHaveStableRespawn(){
+        int checked=0;
+        for(var level:game.scenes)if(level.camera.targetId.equals("alex"))try(var r=start(level.id)){
+            var markers=r.scene.objects.stream().filter(e->e.properties.getOrDefault("kind","").equals("checkpoint")).sorted(java.util.Comparator.comparingDouble(e->e.x)).toList();
+            var player=Hierarchy.find(r.scene,"alex");
+            for(var marker:markers){
+                String label=level.id+" at "+marker.x;
+                player.x=marker.x;player.y=marker.y;
+                var body=megalodonte.engine.Runtime.collisionBounds(r.scene,player);
+                assertTrue(r.blocked(player,0,-.01),"Checkpoint lacks support: "+label);
+                assertFalse(r.scene.objects.stream().filter(e->e!=player&&e.solid&&!e.trigger).anyMatch(e->megalodonte.engine.Runtime.overlaps(body,megalodonte.engine.Runtime.collisionBounds(r.scene,e))),"Checkpoint overlaps obstacle: "+label);
+                r.update(0,0,0);
+                var hole=r.scene.objects.stream().filter(e->e.properties.getOrDefault("kind","").equals("hole")).min(java.util.Comparator.comparingDouble(e->e.x<marker.x?marker.x-e.x:10000+e.x-marker.x)).orElseThrow();
+                player.x=hole.x+1;player.y=0;r.update(0,0,0);
+                assertEquals(marker.x,player.x,.001,"Checkpoint must activate and respawn locally: "+label);
+                for(int i=0;i<20;i++)r.update(.05,0,0);
+                assertTrue(player.y>4.8,"Checkpoint must not fall into hole: "+label);
+                assertEquals(marker.x,player.x,.001,"Respawn must remain stable: "+label);
+                checked++;
+            }
         }
+        assertEquals(248,checked);
     }
     @Test void ordinaryJumpKeepsFloorFramed(){for(var level:game.scenes)if(level.camera.mode.equals("follow")&&level.camera.targetId.equals("alex"))try(var r=start(level.id)){
         assertTrue(r.scene.camera.holdGroundDuringJump,"Ground framing must be saved for "+level.id);
