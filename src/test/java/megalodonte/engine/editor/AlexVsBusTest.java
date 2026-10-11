@@ -47,6 +47,18 @@ class AlexVsBusTest {
             assertTrue(p.y<bounds.y()-1,"Lateral contact must not cancel gravity, side="+side);
         }
     }
+    @Test void ordinaryJumpKeepsFloorFramed(){try(var r=start("normal-1")){
+        var player=Hierarchy.find(r.scene,"alex");
+        for(int i=0;i<40;i++)r.update(.025,0,0);
+        double groundCamera=r.scene.camera.y,groundY=player.y,maxY=player.y;
+        r.setAction("space",true);r.update(.025,0,0);r.setAction("space",false);
+        for(int i=0;i<60;i++){
+            r.update(.025,0,0);maxY=Math.max(maxY,player.y);
+            assertTrue(r.scene.camera.y<=groundCamera+.05,"Jump must not lift camera away from floor");
+            assertTrue(CameraView.of(r.scene.camera,1280,720).bottom()<7,"Street remains visible");
+        }
+        assertTrue(maxY>groundY+1,"Test must perform a real jump");
+    }}
     @Test void cameraFollowsPlayerIntoUndergroundPassageAndBack(){try(var r=start("normal-1")){
         var player=r.scene.objects.stream().filter(e->e.id.equals("alex")).findFirst().orElseThrow();
         var box=r.scene.objects.stream().filter(e->e.name.equals("pushable")).findFirst().orElseThrow();

@@ -48,6 +48,29 @@ class AlexVsBusEditorTest {
                 selector.getSelectionModel().select(11);
                 var objectList=(javafx.scene.layout.VBox)((javafx.scene.control.ScrollPane)((Pane)app.current().component("tree").getJavaFxNode()).getChildren().getFirst()).getContent();
                 objectList.getChildren().stream().filter(n->n instanceof javafx.scene.control.Button b&&b.getText().equals("player")).map(n->(javafx.scene.control.Button)n).findFirst().orElseThrow().fire();
+                // Hidden checkpoints remain discoverable after deselection, without enabling runtime visibility.
+                objectList.getChildren().stream().filter(n->n instanceof javafx.scene.control.Button b&&b.getText().equals("Checkpoint")).map(n->(javafx.scene.control.Button)n).findFirst().orElseThrow().fire();
+                javafx.event.Event.fireEvent(canvas,new javafx.scene.input.MouseEvent(javafx.scene.input.MouseEvent.MOUSE_PRESSED,1,canvas.getHeight()/2,1,canvas.getHeight()/2,javafx.scene.input.MouseButton.PRIMARY,1,false,false,false,false,true,false,false,false,false,false,null));
+                app.current().invoke("toggleColliders");app.current().invoke("toggleColliders");
+                var triggerPreview=canvas.snapshot(null,null);long markerPixels=0;
+                for(int py=0;py<(int)triggerPreview.getHeight();py++)for(int px=0;px<(int)triggerPreview.getWidth();px++){
+                    var color=triggerPreview.getPixelReader().getColor(px,py);
+                    if(Math.abs(color.getRed()-166.0/255)<.02&&Math.abs(color.getGreen()-184.0/255)<.02&&Math.abs(color.getBlue()-204.0/255)<.02)markerPixels++;
+                }
+                assertTrue(markerPixels>10,"Hidden checkpoint outline must remain visible without selection");
+                AlexVsBusVisualTest.snapshot(canvas,"editor-hidden-triggers");
+                app.current().invoke("toggleVisualDebug");
+                assertEquals("Debug visual: nomes visíveis",app.current().states().string("mensagem").get());
+                var labeled=canvas.snapshot(null,null);long changedPixels=0;
+                for(int py=0;py<(int)labeled.getHeight();py++)for(int px=0;px<(int)labeled.getWidth();px++)
+                    if(labeled.getPixelReader().getArgb(px,py)!=triggerPreview.getPixelReader().getArgb(px,py))changedPixels++;
+                assertTrue(changedPixels>20,"Debug visual must draw object names");
+                app.current().invoke("toggleVisualDebug");
+                assertEquals("Debug visual: nomes ocultos",app.current().states().string("mensagem").get());
+                var unlabeled=canvas.snapshot(null,null);
+                for(int py=0;py<(int)unlabeled.getHeight();py++)for(int px=0;px<(int)unlabeled.getWidth();px++)
+                    assertEquals(triggerPreview.getPixelReader().getArgb(px,py),unlabeled.getPixelReader().getArgb(px,py),"Hiding names restores preview");
+                objectList.getChildren().stream().filter(n->n instanceof javafx.scene.control.Button b&&b.getText().equals("player")).map(n->(javafx.scene.control.Button)n).findFirst().orElseThrow().fire();
                 double originalX=Double.parseDouble(app.current().states().string("x").get());
                 double originalY=Double.parseDouble(app.current().states().string("y").get());
                 javafx.event.Event.fireEvent(canvas,new javafx.scene.input.KeyEvent(javafx.scene.input.KeyEvent.KEY_PRESSED,"","",javafx.scene.input.KeyCode.RIGHT,false,false,false,false));

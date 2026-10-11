@@ -49,7 +49,7 @@ public final class Editor extends ViewScript {
     private Process androidBuild;
     private boolean disposed;
     private boolean saved;
-    private boolean showColliders,previewAnimations;
+    private boolean showColliders,showObjectNames,previewAnimations;
     private final LinuxGamepad gamepad=new LinuxGamepad();
     private double previewClock;
     private Game.Scene scene() { return runtime == null ? game.scenes.get(sceneIndex) : runtime.scene; }
@@ -80,7 +80,7 @@ public final class Editor extends ViewScript {
             double x=(e.getX()-ox)/scale, y=(oy-e.getY())/scale;
             Game.Entity hit=null;
             var objects=scene().objects;
-            for(int i=objects.size()-1;i>=0;i--){var obj=objects.get(i);if(!obj.visible&&!showColliders)continue;if(EntityGeometry.contains(Hierarchy.worldEntity(scene(),obj),x,y)){hit=obj;break;}}
+            for(int i=objects.size()-1;i>=0;i--){var obj=objects.get(i);if(EntityGeometry.contains(Hierarchy.worldEntity(scene(),obj),x,y)||obj.trigger&&containsCollider(scene(),obj,x,y)){hit=obj;break;}}
             if(hit!=null){boolean linking=pendingParentChild!=null;selectObject(hit);
                 if(linking){draggingSelection=false;return;}
                 var world=Hierarchy.pose(scene(),selected);dragX=x-world.x();dragY=y-world.y();
@@ -142,6 +142,10 @@ public final class Editor extends ViewScript {
         }
         draw();event.consume();return true;
     }
+    private static boolean containsCollider(Game.Scene scene,Game.Entity entity,double x,double y){
+        var bounds=megalodonte.engine.Runtime.collisionBounds(scene,entity);
+        return x>=bounds.x()&&x<=bounds.x()+bounds.width()&&y>=bounds.y()&&y<=bounds.y()+bounds.height();
+    }
     private int axis(KeyCode a,KeyCode b){return keys.contains(a)||keys.contains(b)?1:0;}
     private void draw(){
         var s=scene(); var g=canvas.getGraphicsContext2D();
@@ -152,7 +156,7 @@ public final class Editor extends ViewScript {
         if(runtime==null){g.setStroke(Color.web("#ffffff18")); for(int i=(int)Math.max(0,Math.floor(view.left()));i<=Math.min(s.worldWidth,view.left()+view.width());i++)g.strokeLine(ox+i*scale,oy,ox+i*scale,oy-s.worldHeight*scale);for(int i=(int)Math.max(0,Math.floor(view.bottom()));i<=Math.min(s.worldHeight,view.bottom()+view.height());i++)g.strokeLine(ox,oy-i*scale,ox+s.worldWidth*scale,oy-i*scale);}
         TileDraw.render(s,view,(tile,x,y,w,h,alpha,a,b,c,d)->{Image image=assetImage(tile.assetPath);if(image==null||image.isError())return;g.save();g.setGlobalAlpha(alpha);g.translate(x+w/2,y+h/2);g.scale(w,h);g.transform(a,b,c,d,0,0);g.drawImage(image,tile.sourceX,tile.sourceY,tile.width,tile.height,-0.5,-0.5,1,1);g.restore();});
         if(runtime==null){for(var map:s.tileMaps){g.setStroke(Color.web("#ffcc66"));g.strokeRect(ox+map.x*scale,oy-(map.y+map.rows*map.tileHeight*map.unitScale)*scale,map.columns*map.tileWidth*map.unitScale*scale,map.rows*map.tileHeight*map.unitScale*scale);}}
-        for(var e:s.objects){if(!e.visible&&e!=selected)continue;var pose=Hierarchy.pose(s,e);double x=ox+pose.x()*scale,y=oy-(pose.y()+e.height)*scale;
+        for(var e:s.objects){if(runtime!=null&&!e.visible)continue;var pose=Hierarchy.pose(s,e);double x=ox+pose.x()*scale,y=oy-(pose.y()+e.height)*scale;
             Image image=null;
             String sprite=Sprites.asset(e,runtime==null&&previewAnimations?e.animationTime+previewClock:e.animationTime);if(!sprite.isBlank())image=assetImage(sprite);
             g.save();if(!e.visible)g.setGlobalAlpha(.35);double cx=x+e.width*scale/2,cy=y+e.height*scale/2;
@@ -162,9 +166,15 @@ public final class Editor extends ViewScript {
             if(runtime==null&&e==selected){g.setStroke(Color.CYAN);g.setLineWidth(2);g.strokeRect(x,y,e.width*scale,e.height*scale);}
             g.restore();
         }
-        if(runtime==null&&(showColliders||selected!=null)){
+        if(runtime==null){
             g.save();g.setStroke(Color.web("#ffcc66"));g.setLineDashes(4,3);
-            for(var e:s.objects)if(e.solid&&(showColliders||e==selected)){var b=megalodonte.engine.Runtime.collisionBounds(s,e);g.strokeRect(ox+b.x()*scale,oy-(b.y()+b.height())*scale,b.width()*scale,b.height()*scale);}
+            for(var e:s.objects)if(e.trigger||!e.visible||e.solid&&(showColliders||e==selected)){var b=megalodonte.engine.Runtime.collisionBounds(s,e);g.setStroke(Color.web(e.trigger?"#da81ff":!e.visible?"#a6b8cc":"#ffcc66"));g.strokeRect(ox+b.x()*scale,oy-(b.y()+b.height())*scale,b.width()*scale,b.height()*scale);}
+            if(showObjectNames)for(var e:s.objects){
+                var b=megalodonte.engine.Runtime.collisionBounds(s,e);
+                g.setFill(Color.web(e.trigger?"#da81ff":!e.visible?"#a6b8cc":"#ffffff"));
+                g.fillText(e.name+(e.trigger?" • gatilho":!e.visible?" • oculto":""),ox+b.x()*scale+3,oy-(b.y()+b.height())*scale-4);
+            }
+            g.setStroke(Color.web("#ffcc66"));
             if(showColliders)for(var map:s.tileMaps)for(var b:map.obstacles)g.strokeRect(ox+(map.x+b.x*map.unitScale)*scale,oy-(map.y+(b.y+b.height)*map.unitScale)*scale,b.width*map.unitScale*scale,b.height*map.unitScale*scale);
             g.restore();
         }
@@ -397,6 +407,7 @@ public final class Editor extends ViewScript {
     public void editMapFeatures(){if(selectedMap==null){message("Selecione um mapa na lista.");return;}if(!commitMapInspector())return;new TileMapEditor(selectedMap,value->{Game copy=Codec.copy(game);int i=game.scenes.get(sceneIndex).tileMaps.indexOf(selectedMap);copy.scenes.get(sceneIndex).tileMaps.set(i,value);Codec.validate(copy);game.scenes.get(sceneIndex).tileMaps.set(i,value);selectedMap=value;refresh();},pendingAssets,directory,owner()).show();}
     public void createTileMap(){stop();var map=new Game.TileMap();map.name="Mapa "+(scene().tileMaps.size()+1);map.columns=20;map.rows=18;map.tileWidth=map.tileHeight=24;map.unitScale=1.0/24;var layer=new Game.TileLayer();layer.name="Camada 1";layer.data=new long[map.columns*map.rows];map.layers.add(layer);scene().tileMaps.add(map);scene().worldWidth=Math.max(scene().worldWidth,map.columns*map.tileWidth*map.unitScale);scene().worldHeight=Math.max(scene().worldHeight,map.rows*map.tileHeight*map.unitScale);set("sceneWidth",""+scene().worldWidth);set("sceneHeight",""+scene().worldHeight);selectedMap=map;selected=null;selectedHud=null;set("hudSelected",false);set("mapSelected",true);set("mapX","0");set("mapY","0");set("mapScale",""+map.unitScale);refresh();editMapFeatures();}
     public void toggleAnimationPreview(){if(runtime!=null)stop();previewAnimations=!previewAnimations;previewClock=0;message("Prévia de animações na cena: "+(previewAnimations?"ativa (sem scripts)":"pausada"));}
+    public void toggleVisualDebug(){showObjectNames=!showObjectNames;draw();message("Debug visual: nomes "+(showObjectNames?"visíveis":"ocultos"));}
     public void toggleColliders(){showColliders=!showColliders;draw();message("Colisores: "+(showColliders?"visíveis":"ocultos"));}
     public void duplicateHud(){if(selectedHud==null)return;if(!commitHudInspector())return;var value=selectedHud.copy();if(value.action.isBlank())value.action=selectedHud.id;value.id=UUID.randomUUID().toString();value.offsetX+=24;value.offsetY+=24;game.scenes.get(sceneIndex).hud.add(value);selectedHud=value;refresh();inspectHud();}
     public void moveForward(){moveLayerOrder(true);}

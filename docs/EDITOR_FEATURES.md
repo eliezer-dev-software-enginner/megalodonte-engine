@@ -84,3 +84,9 @@ Com o foco na cena ou na lista de objetos, as **setas** movem o objeto seleciona
 O campo **Espelhar colisor junto com o sprite** permite controlar o espelhamento da área de contato separadamente do desenho. Para personagens com um colisor físico estável, desative-o: virar ou usar uma animação com sprite mais largo não deve deslocar o corpo para dentro de obstáculos. O Alex vs Bus usa essa configuração no jogador para evitar travamentos nas bordas das caixas.
 
 O acompanhamento da câmera aceita deslocamentos X/Y do alvo em **Configurar cena** (botão direito na lista de cenas). O deslocamento vertical positivo enquadra uma área acima do personagem, mantendo-o mais abaixo na tela. Ele funciona com a zona morta e a suavização tanto na superfície quanto no subterrâneo; não fixa a posição vertical da câmera.
+
+Em **Cena / câmera**, marque **Manter chão enquadrado durante saltos** para evitar que o acompanhamento vertical esconda o chão durante um salto comum. A câmera acompanha quedas, reajusta a altura ao aterrissar e pode subir para manter o colisor do alvo visível em saltos altos. O acompanhamento horizontal continua ativo. A opção fica salva em `camera.holdGroundDuringJump` e é desativada por padrão em novos projetos.
+
+No preview de edição, gatilhos têm contorno roxo, mesmo sem seleção. Objetos com `visible:false` aparecem com transparência, permitindo selecioná-los diretamente na cena. Esses indicadores não aparecem no modo Play e não alteram a visibilidade salva do objeto. O botão **Colisores** continua controlando a exibição dos demais colisores físicos.
+
+O botão **Debug visual**, à direita de **Colisores**, mostra ou oculta os nomes dos objetos no preview. Os nomes começam ocultos; quando ativados, incluem as indicações “gatilho” e “oculto”. Os contornos continuam disponíveis independentemente desse botão.

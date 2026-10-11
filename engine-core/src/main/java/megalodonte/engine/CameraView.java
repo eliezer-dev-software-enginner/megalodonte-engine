@@ -14,7 +14,8 @@ public record CameraView(double scale,double originX,double originY,double left,
     public double screenY(double y){return originY-y*scale;}
     public double worldX(double x){return (x-originX)/scale;}
     public double worldY(double y){return (originY-y)/scale;}
-    public static void update(Game.Scene scene,double dt){
+    public static void update(Game.Scene scene,double dt){update(scene,dt,true);}
+    public static void update(Game.Scene scene,double dt,boolean targetGrounded){
         var camera=scene.camera;
         if(camera.mode.equals("follow")&&!camera.targetId.isEmpty()){
             var target=Hierarchy.find(scene,camera.targetId);var pose=Hierarchy.pose(scene,target);
@@ -22,6 +23,11 @@ public record CameraView(double scale,double originX,double originY,double left,
             double dx=x-camera.x,dy=y-camera.y;
             dx=Math.copySign(Math.max(0,Math.abs(dx)-camera.deadZoneWidth/2),dx);
             dy=Math.copySign(Math.max(0,Math.abs(dy)-camera.deadZoneHeight/2),dy);
+            if(camera.holdGroundDuringJump&&!targetGrounded&&dy>0){
+                // Keep the floor framed, except when the actor would leave the viewport.
+                double head=Runtime.collisionBounds(scene,target).y()+Runtime.collisionBounds(scene,target).height();
+                dy=Math.max(0,head-camera.y-camera.height/camera.zoom/2+.25);
+            }
             double blend=camera.followSpeed==0?1:1-Math.exp(-camera.followSpeed*Math.max(0,dt));
             camera.x+=dx*blend;camera.y+=dy*blend;
         }

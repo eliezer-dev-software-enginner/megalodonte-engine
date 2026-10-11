@@ -535,6 +535,16 @@
                     "events": {
                       "onClick": "toggleColliders"
                     }
+                  },
+                  {
+                    "type": "Button",
+                    "props": {
+                      "text": "Debug visual",
+                      "height": 30
+                    },
+                    "events": {
+                      "onClick": "toggleVisualDebug"
+                    }
                   }
                 ]
               }

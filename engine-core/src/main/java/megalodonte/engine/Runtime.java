@@ -20,7 +20,7 @@ public final class Runtime implements AutoCloseable {
     public Runtime(Game source,ScriptFactory factory,Events events){
         baseline=Codec.copy(source);game=Codec.copy(source);this.factory=factory;this.events=events;
         scene=game.scenes.stream().filter(s->s.id.equals(game.entrySceneId)).findFirst().orElseThrow();
-        state.putAll(events.loadState());startScripts();CameraView.update(scene,0);
+        state.putAll(events.loadState());startScripts();updateCamera(0);
     }
     public static ScriptFactory reflection(ClassLoader loader){return name->(GameScript)Class.forName(name,true,loader).getDeclaredConstructor().newInstance();}
     private void attach(String name,Game.Entity e,Game.Hud h){if(name.isBlank())return;
@@ -48,8 +48,15 @@ public final class Runtime implements AutoCloseable {
         }
         for(var attachment:java.util.List.copyOf(scripts))attachment.script.onUpdate(dt,attachment.context);
         for(var entity:scene.objects)entity.animationTime+=dt;
-        CameraView.update(scene,dt);pressed.clear();released.clear();
-        if(nextScene!=null){String target=nextScene;nextScene=null;destroyScripts();int index=0;while(!baseline.scenes.get(index).id.equals(target))index++;scene=Codec.GSON.fromJson(Codec.GSON.toJson(baseline.scenes.get(index)),Game.Scene.class);game.scenes.set(index,scene);elapsed=0;paused=false;events.pauseAudio(false);down.clear();startScripts();CameraView.update(scene,0);}
+        updateCamera(dt);pressed.clear();released.clear();
+        if(nextScene!=null){String target=nextScene;nextScene=null;destroyScripts();int index=0;while(!baseline.scenes.get(index).id.equals(target))index++;scene=Codec.GSON.fromJson(Codec.GSON.toJson(baseline.scenes.get(index)),Game.Scene.class);game.scenes.set(index,scene);elapsed=0;paused=false;events.pauseAudio(false);down.clear();startScripts();updateCamera(0);}
+    }
+    private void updateCamera(double dt){
+        var camera=scene.camera;
+        boolean grounded=true;
+        if(camera.holdGroundDuringJump&&camera.mode.equals("follow")&&!camera.targetId.isEmpty())
+            grounded=blocked(Hierarchy.find(scene,camera.targetId),0,-.01);
+        CameraView.update(scene,dt,grounded);
     }
     public record Movement(double x,double y,boolean blockedX,boolean blockedY){}
     public Movement moveObject(Game.Entity entity,double dx,double dy){
