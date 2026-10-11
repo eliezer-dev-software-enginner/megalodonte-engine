@@ -47,7 +47,8 @@ class AlexVsBusTest {
             assertTrue(p.y<bounds.y()-1,"Lateral contact must not cancel gravity, side="+side);
         }
     }
-    @Test void ordinaryJumpKeepsFloorFramed(){try(var r=start("normal-1")){
+    @Test void ordinaryJumpKeepsFloorFramed(){for(var level:game.scenes)if(level.camera.mode.equals("follow")&&level.camera.targetId.equals("alex"))try(var r=start(level.id)){
+        assertTrue(r.scene.camera.holdGroundDuringJump,"Ground framing must be saved for "+level.id);
         var player=Hierarchy.find(r.scene,"alex");
         for(int i=0;i<40;i++)r.update(.025,0,0);
         double groundCamera=r.scene.camera.y,groundY=player.y,maxY=player.y;
