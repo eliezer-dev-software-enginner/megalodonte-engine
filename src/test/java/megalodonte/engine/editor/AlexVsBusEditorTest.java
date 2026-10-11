@@ -30,6 +30,12 @@ class AlexVsBusEditorTest {
                 String edited=authored.lastEditedSceneId.isBlank()?authored.entrySceneId:authored.lastEditedSceneId;
                 assertTrue(app.current().states().string("project").get().contains(authored.scenes.stream().filter(s->s.id.equals(edited)).findFirst().orElseThrow().name));
                 var canvas=(Canvas)((Pane)app.current().component("viewport").getJavaFxNode()).getChildren().getFirst();
+                FeatureEditorsTest.snapshot(stage.getScene().getRoot(),"editor-release-toolbar");
+                app.current().invoke("engineSettings");
+                var settingsPane=javafx.stage.Window.getWindows().stream().map(javafx.stage.Window::getScene).filter(java.util.Objects::nonNull).map(javafx.scene.Scene::getRoot).filter(root->root.lookup("#androidSdkPath")!=null).findFirst().orElseThrow();
+                assertNotNull(settingsPane.lookup("#engineSettingsStatus"));
+                FeatureEditorsTest.snapshot(settingsPane,"engine-settings");
+                for(var window:new java.util.ArrayList<>(javafx.stage.Window.getWindows()))if(window!=stage)window.hide();
                 assertTrue(canvas.getHeight()>300);AlexVsBusVisualTest.snapshot(canvas,"alex-vs-bus-editor");
                 var sceneHost=(Pane)app.current().component("sceneList").getJavaFxNode();
                 var selector=(javafx.scene.control.ListView<?>)sceneHost.getChildren().getFirst();assertEquals(25,selector.getItems().size());

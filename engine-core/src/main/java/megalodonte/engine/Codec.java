@@ -55,7 +55,7 @@ public final class Codec {
     private static void script(String name){if(name==null || (!name.isEmpty()&&!name.matches("[A-Za-z_$][\\w$]*(\\.[A-Za-z_$][\\w$]*)*")))throw new IllegalArgumentException("Classe de script inválida");}
     private static void validateSceneFeatures(Game.Scene scene){
         var c=scene.camera;
-        if(c==null || !Set.of("fixed","follow").contains(c.mode)|| c.targetId==null || !positive(c.width)||!positive(c.height)||!positive(c.zoom)||!Double.isFinite(c.x)||!Double.isFinite(c.y)||!Double.isFinite(c.followSpeed)||c.followSpeed<0||!Double.isFinite(c.fadeSeconds)||c.fadeSeconds<0||!Double.isFinite(c.deadZoneWidth)||c.deadZoneWidth<0||!Double.isFinite(c.deadZoneHeight)||c.deadZoneHeight<0)throw new IllegalArgumentException("Câmera inválida");
+        if(c==null || !Set.of("fixed","follow").contains(c.mode)|| c.targetId==null || !positive(c.width)||!positive(c.height)||!positive(c.zoom)||!Double.isFinite(c.x)||!Double.isFinite(c.y)||!Double.isFinite(c.followOffsetX)||!Double.isFinite(c.followOffsetY)||!Double.isFinite(c.followSpeed)||c.followSpeed<0||!Double.isFinite(c.fadeSeconds)||c.fadeSeconds<0||!Double.isFinite(c.deadZoneWidth)||c.deadZoneWidth<0||!Double.isFinite(c.deadZoneHeight)||c.deadZoneHeight<0)throw new IllegalArgumentException("Câmera inválida");
         validateAsset(scene.musicAssetPath);script(scene.scriptClassName);
         if(!Double.isFinite(scene.musicVolume)||scene.musicVolume<0||scene.musicVolume>1)throw new IllegalArgumentException("Volume deve estar entre 0 e 1");
         if(scene.tileMaps==null)throw new IllegalArgumentException("Mapas inválidos");

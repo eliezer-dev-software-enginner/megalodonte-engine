@@ -454,6 +454,7 @@ public final class Editor extends ViewScript {
     public void openProjectFolder(){if(!ensureProject())return;launchExternal(System.getProperty("os.name").toLowerCase().contains("win")?"explorer":System.getProperty("os.name").toLowerCase().contains("mac")?"open":"xdg-open");}
     public void openProjectIde(){if(!ensureProject())return;try{ScriptCompiler.prepareIde(directory);var dialog=new TextInputDialog("code");dialog.setTitle("Abrir na IDE");dialog.setHeaderText("Executável da IDE (code, idea, codium ou caminho completo)");dialog.showAndWait().ifPresent(this::launchExternal);}catch(Exception e){message(e.getMessage());}}
     private void launchExternal(String executable){try{if(executable.isBlank())return;new ProcessBuilder(executable,directory.toAbsolutePath().toString()).start();}catch(Exception e){message("Não foi possível abrir: "+e.getMessage());}}
+    public void engineSettings(){EngineSettings.show(canvas.getScene().getWindow(),directory,this::message);}
     public void exportAndroid(){exportGame("Android","build-android.sh");}
     public void exportAndroidRelease(){exportGame("Android-Release","export-android-release.sh");}
     public void exportDesktop(){exportGame("Desktop","build-desktop.sh");}
@@ -464,7 +465,9 @@ public final class Editor extends ViewScript {
         if(!Files.isRegularFile(script)){message("Script de build não encontrado. Configure -Dengine.home com a pasta da engine.");return;}
         try{
             Path log=directory.resolve("build/"+platform.toLowerCase(Locale.ROOT)+"-build.log");Files.createDirectories(log.getParent());
-            androidBuild=new ProcessBuilder("bash",script.toString(),directory.toString()).redirectErrorStream(true).redirectOutput(log.toFile()).start();
+            var builder=new ProcessBuilder("bash",script.toString(),directory.toString()).redirectErrorStream(true).redirectOutput(log.toFile());
+            if(platform.startsWith("Android")){var sdk=EngineSettings.sdk();if(sdk!=null){String sdkPath=EngineSettings.validate(sdk.toString()).toString();builder.environment().put("ANDROID_HOME",sdkPath);builder.environment().put("ANDROID_SDK_ROOT",sdkPath);}}
+            androidBuild=builder.start();
             Process process=androidBuild;Path exported=directory.resolve("build/"+platform.toLowerCase(Locale.ROOT));
             message("Compilando "+platform+"… log: "+log);
             Thread worker=new Thread(()->{try{int code=process.waitFor();javafx.application.Platform.runLater(()->{if(!disposed)message(code==0?(scriptName.equals("export-android-release.sh")?"Projeto Android Release pronto em "+exported.resolve("project")+" • abra no Android Studio para assinar":platform+" gerado em "+exported+" • pasta aberta no explorador"):"Build "+platform+" falhou. Consulte "+log);});}catch(InterruptedException e){Thread.currentThread().interrupt();}},"game-export");

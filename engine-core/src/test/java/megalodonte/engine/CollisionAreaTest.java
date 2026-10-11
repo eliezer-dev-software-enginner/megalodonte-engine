@@ -22,6 +22,12 @@ class CollisionAreaTest {
         e.flipX=true;assertEquals(15,Runtime.collisionBounds(scene,e).x(),1e-9);
         e.rotation=90;bounds=Runtime.collisionBounds(scene,e);assertEquals(2,bounds.width(),1e-9);assertEquals(1,bounds.height(),1e-9);
     }
+    @Test void playerColliderCanStayStableAcrossFacingAndSpriteWidth(){
+        var scene=Game.demo().scenes.get(0);var e=scene.objects.get(0);
+        e.width=32.0/24;e.height=64.0/24;e.colliderOffsetX=8.0/24;e.colliderOffsetY=4.0/24;e.colliderWidth=.5;e.colliderHeight=2.5;e.colliderFollowsFlip=false;
+        var before=Runtime.collisionBounds(scene,e);e.flipX=true;assertEquals(before,Runtime.collisionBounds(scene,e));
+        e.width=64.0/24;var after=Runtime.collisionBounds(scene,e);assertEquals(before.x(),after.x(),1e-9);assertEquals(before.y(),after.y(),1e-9);assertEquals(before.width(),after.width(),1e-9);
+    }
     @Test void legacyOverlapUsesColliderRatherThanSprite(){
         var a=new Game.Entity();a.x=0;a.y=0;a.width=10;a.colliderWidth=1;a.colliderHeight=1;
         var b=new Game.Entity();b.x=5;b.y=0;assertFalse(Runtime.overlaps(a,b));b.x=.5;assertTrue(Runtime.overlaps(a,b));

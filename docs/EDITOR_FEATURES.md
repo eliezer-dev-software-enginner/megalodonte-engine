@@ -80,3 +80,7 @@ Scripts devem usar `context.overlaps(a, b)` e `context.collisionBounds(objeto)`,
 ### Mover seleção pelo teclado
 
 Com o foco na cena ou na lista de objetos, as **setas** movem o objeto selecionado em passos de 0,1 unidade do mundo (HUD: 1 pixel de referência). **Shift + seta** multiplica o passo por 10; **Ctrl + seta** divide por 10. O inspetor acompanha a posição e objetos vinculados preservam a hierarquia. Nas HUDs, o movimento acompanha a direção da seta independentemente da âncora. Campos de texto preservam o uso normal das setas. Durante o Play, as setas continuam sendo entradas do jogo.
+
+O campo **Espelhar colisor junto com o sprite** permite controlar o espelhamento da área de contato separadamente do desenho. Para personagens com um colisor físico estável, desative-o: virar ou usar uma animação com sprite mais largo não deve deslocar o corpo para dentro de obstáculos. O Alex vs Bus usa essa configuração no jogador para evitar travamentos nas bordas das caixas.
+
+O acompanhamento da câmera aceita deslocamentos X/Y do alvo em **Configurar cena** (botão direito na lista de cenas). O deslocamento vertical positivo enquadra uma área acima do personagem, mantendo-o mais abaixo na tela. Ele funciona com a zona morta e a suavização tanto na superfície quanto no subterrâneo; não fixa a posição vertical da câmera.

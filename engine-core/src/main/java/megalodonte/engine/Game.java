@@ -25,7 +25,7 @@ public final class Game {
         public String id = UUID.randomUUID().toString(), name = "Objeto", color = "#56b6c2", assetPath = "";
         public String parentId = "", scriptClassName = "";
         public double x = 2, y = 2, width = 1, height = 1, speed = 4, rotation = 0;
-        public boolean solid = true, trigger = false, player = false, visible = true, flipX = false;
+        public boolean solid = true, trigger = false, player = false, visible = true, flipX = false, colliderFollowsFlip = true;
         public double colliderOffsetX, colliderOffsetY, colliderWidth, colliderHeight;
         public Map<String, Animation> animations = new LinkedHashMap<>();
         public String animation = "";
@@ -60,6 +60,7 @@ public final class Game {
     public static final class Camera {
         public String mode = "fixed", targetId = "";
         public double x = 8, y = 4.5, width = 16, height = 9, zoom = 1;
+        public double followOffsetX, followOffsetY;
         public double followSpeed = 6, deadZoneWidth = 0, deadZoneHeight = 0, fadeSeconds = 0;
         public double viewportTop = 0;
         public boolean clampToWorld = true;

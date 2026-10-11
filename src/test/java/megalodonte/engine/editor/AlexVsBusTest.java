@@ -24,6 +24,43 @@ class AlexVsBusTest {
             r.update(0,0,0);assertEquals(enabled?"hit":"jump",player.animation);
         }
     }
+    @Test void turningAwayFromCrateDoesNotTrapPlayer(){try(var r=start("normal-1")){
+        var p=r.scene.objects.stream().filter(e->e.id.equals("alex")).findFirst().orElseThrow();
+        var box=r.scene.objects.stream().filter(e->e.name.equals("crate")).findFirst().orElseThrow();
+        var b=megalodonte.engine.Runtime.collisionBounds(r.scene,box);
+        // Approach the crate from its right, facing left, then reverse direction.
+        p.flipX=true;p.y=b.y();var area=megalodonte.engine.Runtime.collisionBounds(r.scene,p);
+        p.x=b.x()+b.width()-(area.x()-p.x)+.00001;
+        r.update(.01,-1,0);double x=p.x;
+        for(int i=0;i<25;i++)r.update(.05,1,0);
+        assertTrue(p.x>x+.5,"Player trapped after reversing at crate edge");
+    }}
+    @Test void gravityKeepsWorkingWhilePressingAgainstCrateSide(){
+        for(int side:new int[]{-1,1})try(var r=start("normal-1")){
+            var p=r.scene.objects.stream().filter(e->e.id.equals("alex")).findFirst().orElseThrow();
+            var box=r.scene.objects.stream().filter(e->e.name.equals("crate")).findFirst().orElseThrow();
+            r.scene.objects.removeIf(e->e!=p&&e!=box&&!e.id.equals("bus"));
+            var bounds=megalodonte.engine.Runtime.collisionBounds(r.scene,box);
+            p.y=bounds.y()+.2;p.flipX=side>0;
+            p.x=side>0?bounds.x()+bounds.width()-p.colliderOffsetX+.00001:bounds.x()-p.colliderOffsetX-p.colliderWidth-.00001;
+            for(int i=0;i<30;i++)r.update(.05,-side,0);
+            assertTrue(p.y<bounds.y()-1,"Lateral contact must not cancel gravity, side="+side);
+        }
+    }
+    @Test void cameraFollowsPlayerIntoUndergroundPassageAndBack(){try(var r=start("normal-1")){
+        var player=r.scene.objects.stream().filter(e->e.id.equals("alex")).findFirst().orElseThrow();
+        var box=r.scene.objects.stream().filter(e->e.name.equals("pushable")).findFirst().orElseThrow();
+        double surfaceCamera=r.scene.camera.y;player.x=box.x-player.colliderOffsetX-player.colliderWidth-.05;player.y=7-player.colliderOffsetY;
+        for(int i=0;i<120&&player.y>3.2;i++)r.update(.05,1,0);
+        assertFalse(box.visible,"Pushable crate must clear the passage");assertTrue(player.y<3.2,"Player must enter the underground passage through movement");
+        for(int i=0;i<40;i++)r.update(.05,0,0);
+        assertTrue(r.scene.camera.y<surfaceCamera-3,"Vertical camera must descend into passage");
+        var body=megalodonte.engine.Runtime.collisionBounds(r.scene,player);var view=CameraView.of(r.scene.camera,1280,720);
+        assertTrue(view.bottom()<=body.y());assertTrue(view.bottom()+view.height()>=body.y()+body.height());
+        double undergroundCamera=r.scene.camera.y;player.y=7-player.colliderOffsetY;
+        for(int i=0;i<40;i++)r.update(.05,0,0);
+        assertTrue(r.scene.camera.y>undergroundCamera+1,"Camera must follow return to surface");
+    }}
     @Test void jsonExportImportRoundTripAndRejectInvalidProgress(){
         var source=Codec.copy(game);source.entrySceneId="menu-settings";var exported=new String[1];var incoming=new String[1];var saved=new HashMap<String,String>();
         var events=new megalodonte.engine.Runtime.Events(){

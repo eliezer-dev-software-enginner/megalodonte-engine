@@ -87,7 +87,7 @@ public final class Runtime implements AutoCloseable {
     private static CollisionRect collisionBounds(Game.Entity e,double x,double y,double rotation){
         double w=e.colliderWidth>0?e.colliderWidth:e.width,h=e.colliderHeight>0?e.colliderHeight:e.height;
         double cx=e.colliderOffsetX+w/2-e.width/2,cy=e.colliderOffsetY+h/2-e.height/2;
-        if(e.flipX)cx=-cx;
+        if(e.flipX&&e.colliderFollowsFlip)cx=-cx;
         double angle=Math.toRadians(rotation%360),cos=Math.cos(angle),sin=Math.sin(angle);
         double centerX=x+e.width/2+cx*cos+cy*sin,centerY=y+e.height/2-cx*sin+cy*cos;
         double width=Math.abs(cos)*w+Math.abs(sin)*h,height=Math.abs(sin)*w+Math.abs(cos)*h;

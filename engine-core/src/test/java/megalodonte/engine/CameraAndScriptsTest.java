@@ -9,6 +9,12 @@ class CameraAndScriptsTest {
         CameraView.update(scene,.1);assertEquals(30.5,scene.camera.x);assertEquals(8.5,scene.camera.y);
         scene.camera.deadZoneWidth=4;target.x+=1;CameraView.update(scene,.1);assertEquals(30.5,scene.camera.x);
         target.x=100;CameraView.update(scene,.1);assertEquals(42,scene.camera.x);}
+    @Test void followOffsetKeepsAuthoredFramingWhileTrackingVerticalMovement(){
+        var scene=Game.demo().scenes.get(0);scene.worldHeight=30;scene.camera.mode="follow";scene.camera.clampToWorld=false;scene.camera.targetId=scene.objects.get(0).id;scene.camera.followSpeed=0;scene.camera.followOffsetX=2;scene.camera.followOffsetY=2.5;
+        CameraView.update(scene,.1);var player=scene.objects.get(0);assertEquals(player.x+player.width/2+2,scene.camera.x,1e-9);assertEquals(player.y+player.height/2+2.5,scene.camera.y,1e-9);
+        double old=scene.camera.y;player.y-=4;CameraView.update(scene,.1);assertEquals(old-4,scene.camera.y,1e-9);
+        var game=Game.demo();game.scenes.get(0).camera.followOffsetY=Double.NaN;assertThrows(IllegalArgumentException.class,()->Codec.validate(game));
+    }
     @Test void scriptLifecycleInputAndSceneSwitch(){Game game=Game.demo();var scene=game.scenes.get(0);scene.scriptClassName="Start";var next=new Game.Scene();next.id="next";next.scriptClassName="Next";game.scenes.add(next);List<String> events=new ArrayList<>();
         try(var runtime=new Runtime(game,name->new GameScript(){public void onStart(GameContext c){events.add("start:"+name);}public void onUpdate(double dt,GameContext c){if(c.actionPressed("start"))c.changeScene("next");}public void onDestroy(GameContext c){events.add("end:"+name);}},new Runtime.Events(){})){
             runtime.setAction("start",true);runtime.update(.05,0,0);assertEquals("next",runtime.scene.id);assertEquals(List.of("start:Start","end:Start","start:Next"),events);

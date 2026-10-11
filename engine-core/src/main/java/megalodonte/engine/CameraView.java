@@ -18,7 +18,7 @@ public record CameraView(double scale,double originX,double originY,double left,
         var camera=scene.camera;
         if(camera.mode.equals("follow")&&!camera.targetId.isEmpty()){
             var target=Hierarchy.find(scene,camera.targetId);var pose=Hierarchy.pose(scene,target);
-            double x=pose.x()+target.width/2,y=pose.y()+target.height/2;
+            double x=pose.x()+target.width/2+camera.followOffsetX,y=pose.y()+target.height/2+camera.followOffsetY;
             double dx=x-camera.x,dy=y-camera.y;
             dx=Math.copySign(Math.max(0,Math.abs(dx)-camera.deadZoneWidth/2),dx);
             dy=Math.copySign(Math.max(0,Math.abs(dy)-camera.deadZoneHeight/2),dy);

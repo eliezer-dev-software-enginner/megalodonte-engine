@@ -13,6 +13,7 @@ final class RecentProject {
                 ? Path.of(System.getProperty("user.home"), ".config", "megalodonte-engine", "last-saved-project.txt")
                 : Path.of(override));
     }
+    static RecentProject androidSdkPreference(){return new RecentProject(userPreference().preference.resolveSibling("android-sdk.txt"));}
     static RecentProject imageDirectoryPreference() {
         RecentProject project=userPreference();
         return new RecentProject(project.preference.resolveSibling("last-image-directory.txt"));

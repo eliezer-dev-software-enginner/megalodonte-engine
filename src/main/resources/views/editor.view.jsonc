@@ -269,12 +269,17 @@
                   {
                     "type": "Button",
                     "props": {
-                      "text": "Android Release",
+                      "text": "Projeto Android",
                       "height": 30
                     },
                     "events": {
                       "onClick": "exportAndroidRelease"
                     }
+                  },
+                  {
+                    "type": "Button",
+                    "props": { "text": "Configurações", "height": 30 },
+                    "events": { "onClick": "engineSettings" }
                   }
                 ]
               },

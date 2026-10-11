@@ -1,4 +1,4 @@
-# Android Release pelo Android Studio
+# Preparar projeto para assinatura pelo Android Studio
 
 No editor, abra **Projeto** e configure o identificador do aplicativo, ícone PNG,
 **Código da versão Android (versionCode)** e **Versão exibida (versionName)**.
@@ -6,7 +6,7 @@ No editor, abra **Projeto** e configure o identificador do aplicativo, ícone PN
 `versionName` é a versão mostrada ao usuário, por exemplo `1.0.0`.
 Esses campos são independentes de `version`, a versão do formato do documento.
 
-Clique em **Android Release**. A engine salva o jogo, prepara um projeto completo,
+Clique em **Projeto Android**. A engine salva o jogo, prepara um projeto completo,
 valida a compilação release e abre a pasta no explorador:
 
 ```
@@ -47,12 +47,15 @@ A engine não cria credenciais nem publica o aplicativo.
 
 Os arquivos assinados ficam no destino escolhido no Studio. As saídas do Gradle
 ficam em `app/build/outputs/apk/release` e `app/build/outputs/bundle/release`.
-Os arquivos `game-release-unsigned.apk` e `game-release-unsigned.aab` na pasta
-`build/android-release` são artefatos de validação **sem assinatura**; não são
-as versões finais para distribuição.
+As saídas internas da compilação de validação não têm assinatura e não são
+instaladores prontos. Gere a distribuição assinada pelo Android Studio.
 
-Após editar o jogo, exporte novamente para atualizar assets e scripts.
-O projeto exportado é uma cópia: suas alterações não retornam ao editor.
-O botão **Exportar Android** continua gerando o APK debug para testes rápidos.
+A pasta exportada é uma cópia independente. Compilar nela não sincroniza novas
+mudanças da engine ou do jogo. Clique em **Projeto Android** para atualizar essa
+cópia antes de gerar a distribuição assinada.
 
-Referência: [assinatura de apps no Android Studio](https://developer.android.com/studio/publish/app-signing).
+## Localização do SDK
+
+A exportação detecta o SDK por `ANDROID_HOME`, `ANDROID_SDK_ROOT` ou pela pasta padrão `~/Android/Sdk` (Linux) / `~/Library/Android/sdk` (macOS) e gera `local.properties` com `sdk.dir`. Esse arquivo fica ignorado pelo Git. Ao mover a exportação para outra máquina, ajuste o caminho para o SDK instalado nela.
+
+O botão **Configurações** abre a página Android com o campo **SDK Android** e um seletor de pastas. **Salvar configurações** valida a pasta, persiste a preferência local e atualiza `local.properties` da exportação existente do jogo aberto. As novas exportações e as builds Android usam o caminho escolhido. A configuração fica em `~/.config/megalodonte-engine/android-sdk.txt`, separada de `game.json`.

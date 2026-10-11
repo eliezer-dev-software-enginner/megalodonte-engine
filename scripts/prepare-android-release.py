@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Export a self-contained Android Studio project without credentials or build caches."""
 import json
+import os
 import re
 import shutil
 import sys
@@ -23,6 +24,27 @@ def property_value(value):
         else:
             result += chr(char)
     return result
+
+
+def find_sdk():
+    preference = Path.home() / '.config/megalodonte-engine/android-sdk.txt'
+    chosen = preference.read_text().strip() if preference.is_file() else None
+    candidates = [os.environ.get('ANDROID_HOME'), os.environ.get('ANDROID_SDK_ROOT'), chosen,
+                  Path.home() / 'Android/Sdk', Path.home() / 'Library/Android/sdk']
+    for candidate in candidates:
+        if candidate:
+            sdk = Path(candidate).expanduser().resolve()
+            if (sdk / 'platforms').is_dir():
+                return sdk
+    return None
+
+
+def configure_sdk(project, sdk):
+    local = Path(project) / 'local.properties'
+    lines = local.read_text().splitlines() if local.exists() else []
+    lines = [line for line in lines if not re.match(r'^\s*sdk\.dir\s*[:=]', line)]
+    lines.append('sdk.dir=' + property_value(Path(sdk).resolve()))
+    local.write_text('\n'.join(lines) + '\n', encoding='utf-8')
 
 
 def prepare(engine, game):
@@ -79,11 +101,16 @@ def prepare(engine, game):
         properties = (android / 'gradle.properties').read_text() + '\n'
         properties += '\n'.join(key + '=' + property_value(value) for key, value in values.items()) + '\n'
         (temporary / 'gradle.properties').write_text(properties, encoding='ascii')
+        sdk = find_sdk()
+        if sdk is not None:
+            configure_sdk(temporary, sdk)
         (temporary / '.gitignore').write_text('.gradle/\n**/build/\n.idea/\nlocal.properties\n*.jks\n*.keystore\nsigning.properties\n')
         (temporary / 'README.md').write_text('''# Android Release — projeto exportado
 
 Este projeto contém uma cópia independente dos assets, scripts e runtime da engine.
 Abra esta pasta no Android Studio e aguarde a sincronização do Gradle.
+O SDK local detectado é configurado em local.properties (ignorado pelo Git).
+Em outro computador, ajuste sdk.dir para o SDK instalado naquele computador.
 
 1. Build → Generate Signed Bundle / APK.
 2. Escolha APK para distribuição direta ou Android App Bundle (AAB) para Google Play.
@@ -92,14 +119,15 @@ Abra esta pasta no Android Studio e aguarde a sincronização do Gradle.
 
 Os arquivos assinados ficam no destino escolhido no Studio; as saídas Gradle ficam
 em app/build/outputs/apk/release ou app/build/outputs/bundle/release.
-Os arquivos game-release-unsigned.apk e game-release-unsigned.aab na pasta superior
-são apenas artefatos de validação e ainda precisam de assinatura.
+As saídas da compilação de validação dentro deste projeto não têm assinatura.
+Use Generate Signed Bundle / APK para gerar os arquivos de distribuição.
 
 Nome, pacote, ícone, versionCode e versionName estão em gradle.properties.
 Incremente versionCode para cada atualização. O código de versão é diferente da
 versão do formato do documento game.json. Não inclua keystores ou senhas no Git.
 
-Para atualizar esta exportação, use Android Release no editor ou
+Esta pasta é uma cópia: compilar diretamente nela não sincroniza mudanças do jogo.
+Para atualizar esta exportação, use Projeto Android no editor ou
 bash tools/build.sh android-release na pasta original do jogo.
 Uma exportação existente é preservada em project-backup-<data>-<id>, incluindo
 suas alterações locais; alterações feitas aqui não retornam ao editor.

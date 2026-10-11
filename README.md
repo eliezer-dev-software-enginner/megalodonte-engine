@@ -76,7 +76,15 @@ A lista **CENAS**, no canto superior direito, permite abrir qualquer cena direta
 
 A cobertura dos recursos do runtime pela interface e os fluxos de animação/mapas estão em [Recursos do editor](docs/EDITOR_FEATURES.md).
 
-Para preparar um APK/AAB release assinado pelo Android Studio, use **Android Release**. Configure `versionCode` e `versionName` em **Projeto** e siga [Android Release](docs/ANDROID_RELEASE.md).
+Para gerar um APK Android assinado:
+
+1. Na barra superior da engine, clique em **Configurações → Android**, informe a pasta do SDK e clique em **Salvar configurações**.
+2. Em **Projeto**, configure `versionCode` e `versionName`.
+3. Clique em **Projeto Android**, na barra superior, e aguarde a conclusão. A engine salva o jogo, atualiza assets, scripts e runtime e abre a pasta exportada no gerenciador de arquivos.
+4. No Android Studio, clique em **Open** e selecione `<pasta-do-jogo>/build/android-release/project`. Aguarde a sincronização do Gradle; o SDK configurado na engine já estará indicado em `local.properties`.
+5. Use **Build → Generate Signed Bundle / APK**, escolha **APK**, o módulo `app`, seu keystore/alias e a variante **release**. Conclua para gerar o instalador assinado.
+
+Reutilize a mesma chave nas atualizações e incremente `versionCode`. Para AAB, escolha **Android App Bundle** no assistente. Sempre use **Projeto Android** novamente depois de alterar o jogo ou a engine: a pasta exportada é uma cópia e não se atualiza ao compilar dentro dela. A exportação anterior fica preservada em backup. Veja [Android Release](docs/ANDROID_RELEASE.md).
 
 ### Atalhos de edição da cena
 
@@ -95,3 +103,5 @@ Selecionar um objeto fora da vista pela lista centraliza a visualização nele. 
 Os hosts Desktop, Play do editor e Android suportam `GameContext.exportSave(valores, callback)` e `importSave(validador, callback)`. O JSON versionado inclui o ID do jogo e o estado persistente, separado do documento `game.json`; a importação valida o conteúdo antes de salvar. No Android, a seleção usa o [Storage Access Framework](https://developer.android.com/training/data-storage/shared/documents-files), sem solicitar acesso geral ao armazenamento.
 
 Controles físicos são suportados no Android e no Desktop Linux, inclusive no Play do editor. Os scripts recebem `pad_left`, `pad_right`, `pad_up`, `pad_down`, `pad_a`, `pad_b` e `pad_start`; o analógico esquerdo e o direcional alimentam o movimento horizontal. Há zona morta de 20%, liberação de entradas ao desconectar/perder foco e proteção contra confirmação repetida ao trocar de cena segurando um botão. O Android usa as [entradas nativas de gamepad](https://developer.android.com/games/sdk/game-controller/controller-input); no Linux, o backend lê `/dev/input/js*` com o mapa de eixos/botões do kernel, via JNA. O sistema precisa reconhecer o dispositivo como controle físico.
+
+Em **Configurações → Android**, informe o caminho do SDK ou use **Selecionar pasta…** e clique em **Salvar configurações**. A preferência é local ao computador. As builds Android usam esse SDK; `Projeto Android` gera `local.properties` com esse caminho para o Android Studio. Salvar a configuração também atualiza a exportação existente do jogo aberto.
