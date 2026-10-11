@@ -26,11 +26,14 @@ class AlexVsBusEditorTest {
             var app=new ScriptApplication(AppConfig.load(getClass().getClassLoader()),getClass().getClassLoader());var stage=new Stage();
             megalodonte.application.Bootstrap.handler=context->context.useView(app,1280,850);megalodonte.application.Bootstrap.dispatch(stage,new String[0]);
             var initial=new PauseTransition(Duration.seconds(1));initial.setOnFinished(e->{try{
-                assertTrue(app.current().states().string("project").get().contains("Menu • Título"));
+                var authored=megalodonte.engine.Codec.read(Files.readString(project.resolve("game.json")));
+                String edited=authored.lastEditedSceneId.isBlank()?authored.entrySceneId:authored.lastEditedSceneId;
+                assertTrue(app.current().states().string("project").get().contains(authored.scenes.stream().filter(s->s.id.equals(edited)).findFirst().orElseThrow().name));
                 var canvas=(Canvas)((Pane)app.current().component("viewport").getJavaFxNode()).getChildren().getFirst();
                 assertTrue(canvas.getHeight()>300);AlexVsBusVisualTest.snapshot(canvas,"alex-vs-bus-editor");
                 var sceneHost=(Pane)app.current().component("sceneList").getJavaFxNode();
                 var selector=(javafx.scene.control.ListView<?>)sceneHost.getChildren().getFirst();assertEquals(25,selector.getItems().size());
+                selector.getSelectionModel().select(0);
                 assertTrue(sceneHost.localToScene(0,0).getX()>700,"Scene list should sit at the upper right");
                 selector.getSelectionModel().select(9);assertTrue(app.current().states().string("project").get().contains("Menu • Créditos"));AlexVsBusVisualTest.snapshot(canvas,"alex-vs-bus-editor-credits");
                 selector.getSelectionModel().select(3);assertTrue(app.current().states().string("project").get().contains("Menu • Configurações"));
@@ -39,6 +42,14 @@ class AlexVsBusEditorTest {
                 selector.getSelectionModel().select(11);
                 var objectList=(javafx.scene.layout.VBox)((javafx.scene.control.ScrollPane)((Pane)app.current().component("tree").getJavaFxNode()).getChildren().getFirst()).getContent();
                 objectList.getChildren().stream().filter(n->n instanceof javafx.scene.control.Button b&&b.getText().equals("player")).map(n->(javafx.scene.control.Button)n).findFirst().orElseThrow().fire();
+                double originalX=Double.parseDouble(app.current().states().string("x").get());
+                double originalY=Double.parseDouble(app.current().states().string("y").get());
+                javafx.event.Event.fireEvent(canvas,new javafx.scene.input.KeyEvent(javafx.scene.input.KeyEvent.KEY_PRESSED,"","",javafx.scene.input.KeyCode.RIGHT,false,false,false,false));
+                assertEquals(originalX+.1,Double.parseDouble(app.current().states().string("x").get()),1e-9);
+                javafx.event.Event.fireEvent(objectList,new javafx.scene.input.KeyEvent(javafx.scene.input.KeyEvent.KEY_PRESSED,"","",javafx.scene.input.KeyCode.UP,true,false,false,false));
+                assertEquals(originalY+1,Double.parseDouble(app.current().states().string("y").get()),1e-9);
+                javafx.event.Event.fireEvent(canvas,new javafx.scene.input.KeyEvent(javafx.scene.input.KeyEvent.KEY_PRESSED,"","",javafx.scene.input.KeyCode.LEFT,false,true,false,false));
+                assertEquals(originalX+.09,Double.parseDouble(app.current().states().string("x").get()),1e-9);
                 app.current().invoke("editAnimations");var animationPane=javafx.stage.Window.getWindows().stream().map(javafx.stage.Window::getScene).filter(java.util.Objects::nonNull).map(javafx.scene.Scene::getRoot).filter(root->root.lookup("#animationNames")!=null).findFirst().orElseThrow();
                 ((javafx.scene.control.ListView<String>)animationPane.lookup("#animationNames")).getSelectionModel().select("walk");assertEquals("walk",((javafx.scene.control.ListView<?>)animationPane.lookup("#animationNames")).getSelectionModel().getSelectedItem());FeatureEditorsTest.snapshot(animationPane,"alex-animation-editor");
                 ((javafx.scene.control.Button)((javafx.scene.control.DialogPane)animationPane).lookupButton(javafx.scene.control.ButtonType.CLOSE)).fire();selector.getSelectionModel().select(0);

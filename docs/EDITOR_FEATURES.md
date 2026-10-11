@@ -63,3 +63,20 @@ Selecione a HUD e abra **Propriedades / condições HUD**. A aba **Propriedades*
 Em **Condição visual**, indique o nome de uma propriedade booleana, a imagem para `true`, a imagem para `false` e, opcionalmente, **Bloquear clique quando false**. Sem condição, a HUD continua usando a imagem padrão. Condições com propriedades inexistentes ou de outro tipo são rejeitadas antes de aplicar. A avaliação é a mesma no editor, no Desktop e no Android.
 
 Nos scripts Java, use `hud.booleanProperty("liberado", false)` para ler e `hud.setBooleanProperty("liberado", true)` para alterar o valor. As condições atualizam a imagem e a interação sem trocar manualmente o asset. O editor mostra os valores iniciais; o runtime usa uma cópia do documento, por isso o progresso do jogador não modifica a configuração autoral.
+
+### Navegação da cena
+
+- Segure **Espaço** e arraste com o botão esquerdo para mover a vista; também é possível arrastar com o botão do meio.
+- Use a roda do mouse para aproximar ou afastar a vista.
+- Selecione um objeto na lista à esquerda: se ele estiver fora da vista, o editor centraliza nele e reduz o zoom quando necessário para mostrar seu tamanho completo. A posição considera a hierarquia e a rotação.
+- Cada cena mantém sua própria vista durante a sessão. Navegar não altera a câmera exportada do jogo, seu alvo ou suas configurações no inspetor.
+
+### Áreas de colisão e gatilhos
+
+`Colisor` ativa ou desativa os contatos do objeto. `Gatilho` (em **Colisores** / opções do objeto) detecta contato sem bloquear o movimento, para moedas, perigos, molas e cordas. Um colisor ativado sem gatilho funciona como obstáculo sólido. O contorno ciano mostra a seleção do sprite; o amarelo tracejado mostra a área de colisão ativa.
+
+Scripts devem usar `context.overlaps(a, b)` e `context.collisionBounds(objeto)`, que consideram deslocamento, dimensões do colisor, hierarquia, rotação e espelhamento. O contato retorna falso quando o colisor de um dos objetos está desativado. A sobrecarga `overlaps(a, b, margem)` permite uma tolerância explícita (por exemplo, para encostar em uma mola). Zero nas dimensões do colisor mantém a compatibilidade com objetos antigos, usando suas dimensões como padrão.
+
+### Mover seleção pelo teclado
+
+Com o foco na cena ou na lista de objetos, as **setas** movem o objeto selecionado em passos de 0,1 unidade do mundo (HUD: 1 pixel de referência). **Shift + seta** multiplica o passo por 10; **Ctrl + seta** divide por 10. O inspetor acompanha a posição e objetos vinculados preservam a hierarquia. Nas HUDs, o movimento acompanha a direção da seta independentemente da âncora. Campos de texto preservam o uso normal das setas. Durante o Play, as setas continuam sendo entradas do jogo.

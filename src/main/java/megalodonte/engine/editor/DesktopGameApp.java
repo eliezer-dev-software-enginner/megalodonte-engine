@@ -23,6 +23,7 @@ public final class DesktopGameApp extends Application {
     private final Map<String,Image> images=new HashMap<>();
     private Path project;
     private boolean failed;
+    private final LinuxGamepad gamepad=new LinuxGamepad();
     @Override public void start(Stage stage)throws Exception{
         String configured=System.getProperty("engine.game");
         if(configured!=null)project=Path.of(configured).toAbsolutePath();
@@ -37,6 +38,8 @@ public final class DesktopGameApp extends Application {
             public void quit(){javafx.application.Platform.exit();}
             public java.util.Map<String,String> loadState(){return playerState.load();}
             public void saveState(java.util.Map<String,String> state){playerState.save(state);}
+            public void exportSave(String json,java.util.function.Consumer<String> done){javafx.application.Platform.runLater(()->SaveFiles.export(stage,json,done));}
+            public void importSave(java.util.function.BiConsumer<String,String> done){javafx.application.Platform.runLater(()->SaveFiles.load(stage,done));}
             public void muteAudio(boolean value){audio.mute(value);}
         });
         var canvas=new Canvas();var root=new StackPane(canvas);canvas.widthProperty().bind(root.widthProperty());canvas.heightProperty().bind(root.heightProperty());
@@ -49,7 +52,8 @@ public final class DesktopGameApp extends Application {
         timer=new AnimationTimer(){long previous;
             @Override public void handle(long now){if(failed)return;try{
                 double dt=previous==0?0:(now-previous)/1e9;previous=now;
-                if(stage.isFocused())runtime.update(dt,(keys.contains(KeyCode.D)||keys.contains(KeyCode.RIGHT)?1:0)-(keys.contains(KeyCode.A)||keys.contains(KeyCode.LEFT)?1:0),0);
+                gamepad.poll(stage.isFocused());gamepad.input.apply(runtime);
+                if(stage.isFocused())runtime.update(dt,gamepad.input.horizontal()+(keys.contains(KeyCode.D)||keys.contains(KeyCode.RIGHT)?1:0)-(keys.contains(KeyCode.A)||keys.contains(KeyCode.LEFT)?1:0),0);
                 audio.update(runtime.scene,asset->project.resolve(asset),message->System.err.println(message));
                 GamePainter.draw(canvas,runtime,DesktopGameApp.this::image);
             }catch(Throwable error){failed=true;audio.close();error.printStackTrace();var alert=new Alert(Alert.AlertType.ERROR,"Erro no jogo: "+error.getMessage());alert.initOwner(stage);alert.show();}}
@@ -58,5 +62,5 @@ public final class DesktopGameApp extends Application {
     }
     private Image image(String asset){if(asset==null||asset.isBlank())return null;return images.computeIfAbsent(asset,key->new Image(project.resolve(key).toUri().toString()));}
     private void releaseMouse(){for(var action:mouseActions)runtime.setAction(action,false);mouseActions.clear();}
-    @Override public void stop(){if(timer!=null)timer.stop();if(runtime!=null)runtime.close();audio.close();images.clear();}
+    @Override public void stop(){if(timer!=null)timer.stop();if(runtime!=null)runtime.close();gamepad.close();audio.close();images.clear();}
 }

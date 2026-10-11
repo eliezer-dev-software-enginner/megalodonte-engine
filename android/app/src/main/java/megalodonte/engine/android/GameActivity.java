@@ -8,19 +8,62 @@ import megalodonte.engine.*;
 import java.util.*;
 
 public final class GameActivity extends Activity {
+    private String exportedSave;
+    private java.util.function.Consumer<String> exportDone;
+    private java.util.function.BiConsumer<String,String> importDone;
+    private void exportSaveFile(String json,java.util.function.Consumer<String> done){
+        exportedSave=json;exportDone=done;
+        try{startActivityForResult(new android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT).addCategory(android.content.Intent.CATEGORY_OPENABLE).setType("application/json").putExtra(android.content.Intent.EXTRA_TITLE,"alex-vs-bus-save.json"),701);}catch(Exception e){exportedSave=null;exportDone=null;done.accept("Falha ao exportar: "+e.getMessage());}
+    }
+    private void importSaveFile(java.util.function.BiConsumer<String,String> done){
+        importDone=done;
+        try{startActivityForResult(new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).addCategory(android.content.Intent.CATEGORY_OPENABLE).setType("*/*"),702);}catch(Exception e){importDone=null;done.accept(null,"Falha ao importar: "+e.getMessage());}
+    }
+    @Override protected void onActivityResult(int request,int result,android.content.Intent data){
+        super.onActivityResult(request,result,data);
+        if(request==701&&exportDone!=null){var done=exportDone;exportDone=null;String json=exportedSave;exportedSave=null;
+            if(result!=RESULT_OK||data==null||data.getData()==null){done.accept("Exportação cancelada.");return;}
+            try(var out=getContentResolver().openOutputStream(data.getData(),"wt")){if(out==null)throw new java.io.IOException("Destino indisponível");out.write(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));done.accept("Dados exportados.");}catch(Exception e){done.accept("Falha ao exportar: "+e.getMessage());}
+        }else if(request==702&&importDone!=null){var done=importDone;importDone=null;
+            if(result!=RESULT_OK||data==null||data.getData()==null){done.accept(null,"Importação cancelada.");return;}
+            try(var in=getContentResolver().openInputStream(data.getData());var out=new java.io.ByteArrayOutputStream()){
+                if(in==null)throw new java.io.IOException("Arquivo indisponível");byte[] bytes=new byte[4096];int n;
+                while((n=in.read(bytes))!=-1){if(out.size()+n>SaveData.MAX_BYTES)throw new java.io.IOException("Arquivo muito grande");out.write(bytes,0,n);}
+                done.accept(out.toString(java.nio.charset.StandardCharsets.UTF_8),null);
+            }catch(Exception e){done.accept(null,"Falha ao importar: "+e.getMessage());}
+        }
+    }
     private GameView view;
     @Override public void onCreate(Bundle state){super.onCreate(state);try{
         String json;try(var stream=getAssets().open("game.json")){json=new String(stream.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);}
-        view=new GameView(Codec.read(json));setSafeContent(view);
+        view=new GameView(Codec.read(json));setSafeContent(view);controllerManager=(android.hardware.input.InputManager)getSystemService(INPUT_SERVICE);controllerManager.registerInputDeviceListener(controllerListener,null);
     }catch(Exception e){android.widget.TextView error=new android.widget.TextView(this);error.setText("Falha ao carregar jogo: "+e.getMessage());setSafeContent(error);}}
     private void setSafeContent(View content){
         var host=new android.widget.FrameLayout(this);host.setBackgroundColor(Color.BLACK);
         host.addView(content,new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
         host.setOnApplyWindowInsetsListener((root,insets)->{var safe=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());root.setPadding(safe.left,safe.top,safe.right,safe.bottom);return insets;});setContentView(host);host.requestApplyInsets();host.post(()->{var controller=host.getWindowInsetsController();if(controller!=null){controller.hide(WindowInsets.Type.statusBars());controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);}});
     }
-    @Override protected void onPause(){super.onPause();if(view!=null){view.active=false;view.clearInput();if(view.music!=null)view.music.pause();}}
+    private final GamepadInput gamepad=new GamepadInput();
+    private double stickX,stickY,hatX,hatY;
+    private android.hardware.input.InputManager controllerManager;
+    private final android.hardware.input.InputManager.InputDeviceListener controllerListener=new android.hardware.input.InputManager.InputDeviceListener(){public void onInputDeviceAdded(int id){}public void onInputDeviceChanged(int id){}public void onInputDeviceRemoved(int id){clearGamepad();}};
+    private int gamepadDirection(String direction){return gamepad.held(direction)?1:0;}
+    private void clearGamepad(){gamepad.clear();stickX=stickY=hatX=hatY=0;}
+    @Override public boolean dispatchGenericMotionEvent(MotionEvent e){
+        if(view!=null&&(e.getSource()&InputDevice.SOURCE_JOYSTICK)==InputDevice.SOURCE_JOYSTICK&&e.getAction()==MotionEvent.ACTION_MOVE){
+            stickX=controllerAxis(e,MotionEvent.AXIS_X);stickY=controllerAxis(e,MotionEvent.AXIS_Y);hatX=controllerAxis(e,MotionEvent.AXIS_HAT_X);hatY=controllerAxis(e,MotionEvent.AXIS_HAT_Y);gamepad.axes(stickX,stickY,hatX,hatY);return true;
+        }return super.dispatchGenericMotionEvent(e);
+    }
+    private double controllerAxis(MotionEvent e,int axis){var range=e.getDevice()==null?null:e.getDevice().getMotionRange(axis,e.getSource());double value=e.getAxisValue(axis);return Math.abs(value)<=Math.max(.2,range==null?0:range.getFlat())?0:value;}
+    @Override public boolean dispatchKeyEvent(KeyEvent e){
+        if(view!=null&&((e.getDevice()!=null&&e.getDevice().supportsSource(InputDevice.SOURCE_GAMEPAD))||(e.getSource()&InputDevice.SOURCE_GAMEPAD)==InputDevice.SOURCE_GAMEPAD||(e.getSource()&InputDevice.SOURCE_JOYSTICK)==InputDevice.SOURCE_JOYSTICK)){
+            String name=switch(e.getKeyCode()){case KeyEvent.KEYCODE_BUTTON_A->"a";case KeyEvent.KEYCODE_BUTTON_B->"b";case KeyEvent.KEYCODE_BUTTON_START->"start";case KeyEvent.KEYCODE_DPAD_LEFT->"left";case KeyEvent.KEYCODE_DPAD_RIGHT->"right";case KeyEvent.KEYCODE_DPAD_UP->"up";case KeyEvent.KEYCODE_DPAD_DOWN->"down";default->"";};
+            if(!name.isEmpty()){gamepad.button(name,e.getAction()==KeyEvent.ACTION_DOWN);return true;}
+        }return super.dispatchKeyEvent(e);
+    }
+    @Override protected void onPause(){super.onPause();clearGamepad();if(view!=null){view.active=false;view.clearInput();if(view.music!=null)view.music.pause();}}
     @Override protected void onResume(){super.onResume();if(view!=null){view.active=true;view.last=0;if(view.music!=null&&!view.runtime.paused)view.music.start();view.postInvalidateOnAnimation();}}
-    @Override protected void onDestroy(){if(view!=null)view.close();super.onDestroy();}
+    @Override protected void onDestroy(){if(controllerManager!=null)controllerManager.unregisterInputDeviceListener(controllerListener);if(view!=null)view.close();super.onDestroy();}
     private final class GameView extends View {
         final megalodonte.engine.Runtime runtime;
         final Paint paint=new Paint();
@@ -34,6 +77,8 @@ public final class GameActivity extends Activity {
             runtime=new megalodonte.engine.Runtime(game,megalodonte.engine.Runtime.reflection(getClass().getClassLoader()),new megalodonte.engine.Runtime.Events(){
                 public java.util.Map<String,String> loadState(){try{var type=new com.google.gson.reflect.TypeToken<java.util.Map<String,String>>(){}.getType();java.util.Map<String,String> state=Codec.GSON.fromJson(getSharedPreferences("game-state",0).getString("state","{}"),type);return state==null?java.util.Map.of():state;}catch(Exception e){return java.util.Map.of();}}
                 public void saveState(java.util.Map<String,String> state){getSharedPreferences("game-state",0).edit().putString("state",Codec.GSON.toJson(state)).apply();}
+                public void exportSave(String json,java.util.function.Consumer<String> done){exportSaveFile(json,done);}
+                public void importSave(java.util.function.BiConsumer<String,String> done){importSaveFile(done);}
                 public void log(String message){android.util.Log.i("MegalodonteScript",message);}
                 public void playSound(String asset){sound(asset);}
                 public void quit(){GameActivity.this.finish();}
@@ -49,7 +94,7 @@ public final class GameActivity extends Activity {
             if(runtime.scene.musicAssetPath.isBlank())return;try{music=audio(runtime.scene.musicAssetPath);music.setLooping(runtime.scene.musicLoop);float volume=muted?0:(float)runtime.scene.musicVolume;music.setVolume(volume,volume);if(!audioPaused)music.start();}catch(Exception e){android.util.Log.e("MegalodonteAudio",runtime.scene.musicAssetPath,e);}}
         @Override protected void onDraw(Canvas canvas){
             if(!active)return;
-            long now=System.nanoTime();try{runtime.update(last==0?0:(now-last)/1e9,dx,dy);updateMusic();}catch(Exception e){active=false;clearInput();android.widget.Toast.makeText(GameActivity.this,"Erro no script: "+e.getMessage(),android.widget.Toast.LENGTH_LONG).show();return;}last=now;
+            long now=System.nanoTime();try{gamepad.apply(runtime);runtime.update(last==0?0:(now-last)/1e9,dx+gamepad.horizontal(),dy);updateMusic();}catch(Exception e){active=false;clearInput();android.widget.Toast.makeText(GameActivity.this,"Erro no script: "+e.getMessage(),android.widget.Toast.LENGTH_LONG).show();return;}last=now;
             var scene=runtime.scene;var view=CameraView.of(scene.camera,getWidth(),getHeight());float scale=(float)view.scale(),ox=(float)view.originX(),oy=(float)view.originY();
             canvas.drawColor(Color.BLACK);canvas.save();canvas.clipRect((float)view.screenX(view.left()),(float)view.screenY(view.bottom()+view.height()),(float)view.screenX(view.left()+view.width()),(float)view.screenY(view.bottom()));paint.setColor(Color.parseColor(scene.background));paint.setAlpha(255);canvas.drawRect(ox,oy-(float)scene.worldHeight*scale,ox+(float)scene.worldWidth*scale,oy,paint);
             TileDraw.render(scene,view,(tile,x,y,w,h,alpha,a,b,c,d)->{Bitmap image=images.get(tile.assetPath);if(image==null)return;canvas.save();float left=(float)Math.floor(x),top=(float)Math.floor(y),right=(float)Math.ceil(x+w),bottom=(float)Math.ceil(y+h);canvas.translate((left+right)/2,(top+bottom)/2);canvas.scale(right-left,bottom-top);Matrix matrix=new Matrix();matrix.setValues(new float[]{(float)a,(float)c,0,(float)b,(float)d,0,0,0,1});canvas.concat(matrix);paint.setAlpha((int)(alpha*255));canvas.drawBitmap(image,new Rect(tile.sourceX,tile.sourceY,tile.sourceX+tile.width,tile.sourceY+tile.height),new RectF(-.5f,-.5f,.5f,.5f),paint);canvas.restore();});paint.setAlpha(255);
@@ -61,7 +106,9 @@ public final class GameActivity extends Activity {
                 if(hud.type.equals("button")&&!hudAsset.isBlank()){Bitmap button=images.get(hudAsset);if(button!=null)canvas.drawBitmap(button,null,rect,paint);}
                 paint.setColor(Color.parseColor(hud.color));
                 if(hud.type.equals("text")||hud.type.equals("button")){paint.setAntiAlias(true);paint.setTextSize((float)(hud.fontSize*b.scale()));canvas.drawText(hud.text,(float)b.x(),(float)b.y()-paint.getFontMetrics().top,paint);paint.setAntiAlias(false);}
-                else{Bitmap image=images.get(hudAsset);if(image!=null)canvas.drawBitmap(image,null,rect,paint);else canvas.drawRect(rect,paint);}canvas.restore();
+                else{Bitmap image=images.get(hudAsset);if(image!=null)canvas.drawBitmap(image,null,rect,paint);else canvas.drawRect(rect,paint);}
+                if(hud.focused){paint.setColor(Color.GREEN);paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(3);canvas.drawRect(rect.left+2,rect.top+2,rect.right-2,rect.bottom-2,paint);paint.setStyle(Paint.Style.FILL);}
+                canvas.restore();
             }
             if(runtime.fadeAlpha()>0){paint.setColor(Color.argb((int)(runtime.fadeAlpha()*255),0,0,0));canvas.drawRect(0,0,getWidth(),getHeight(),paint);}
             postInvalidateOnAnimation();

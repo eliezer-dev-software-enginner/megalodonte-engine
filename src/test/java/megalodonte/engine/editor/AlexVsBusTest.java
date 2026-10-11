@@ -11,6 +11,42 @@ class AlexVsBusTest {
     @AfterAll static void close(){if(compiler!=null)compiler.close();}
     private megalodonte.engine.Runtime start(String id){var copy=Codec.copy(game);copy.entrySceneId=id;return new megalodonte.engine.Runtime(copy,megalodonte.engine.Runtime.reflection(compiler.loader),new megalodonte.engine.Runtime.Events(){});}
 
+    @Test void waterOnlyHurtsInsideItsColliderAndCanBeDisabled(){
+        for(boolean enabled:new boolean[]{true,false})try(var r=start("normal-3")){
+            var player=r.scene.objects.stream().filter(e->e.id.equals("alex")).findFirst().orElseThrow();
+            var body=r.scene.objects.stream().filter(e->e.name.equals("gush-body")).findFirst().orElseThrow();
+            var bus=r.scene.objects.stream().filter(e->e.id.equals("bus")).findFirst().orElseThrow();
+            r.scene.objects.removeIf(e->e!=player&&e!=body&&e!=bus);
+            assertTrue(body.solid);assertTrue(body.trigger);body.solid=enabled;
+            player.x=body.x+.8-player.colliderOffsetX;player.y=body.y;
+            r.update(0,0,0);assertNotEquals("hit",player.animation,"Transparent side of water must not hurt");
+            player.x=body.x+body.colliderOffsetX-player.colliderOffsetX;
+            r.update(0,0,0);assertEquals(enabled?"hit":"jump",player.animation);
+        }
+    }
+    @Test void jsonExportImportRoundTripAndRejectInvalidProgress(){
+        var source=Codec.copy(game);source.entrySceneId="menu-settings";var exported=new String[1];var incoming=new String[1];var saved=new HashMap<String,String>();
+        var events=new megalodonte.engine.Runtime.Events(){
+            public void exportSave(String json,java.util.function.Consumer<String> done){exported[0]=json;done.accept("Dados exportados.");}
+            public void importSave(java.util.function.BiConsumer<String,String> done){done.accept(incoming[0],null);}
+            public void saveState(Map<String,String> values){saved.clear();saved.putAll(values);}
+        };
+        try(var r=new megalodonte.engine.Runtime(source,megalodonte.engine.Runtime.reflection(compiler.loader),events)){
+            r.state.put("progressLevel","3");r.state.put("audio","false");r.state.put("score","900");press(r,"settings-export");
+            assertNotNull(exported[0]);var values=SaveData.decode(game.applicationId,exported[0]);assertEquals("3",values.get("progressLevel"));assertFalse(values.containsKey("score"));
+            r.state.put("progressLevel","1");incoming[0]=exported[0];press(r,"settings-import");assertEquals("3",r.state.get("progressLevel"));assertEquals("3",saved.get("progressLevel"));assertEquals("false",r.state.get("audio"));
+            incoming[0]=SaveData.encode(game.applicationId,Map.of("progressLevel","99"));press(r,"settings-import");assertEquals("3",r.state.get("progressLevel"));assertEquals("3",saved.get("progressLevel"));
+            assertTrue(r.scene.hud.stream().anyMatch(h->h.id.equals("settings-data-status")&&h.text.startsWith("Falha")));
+        }
+    }
+    @Test void controllerNavigatesMenusJumpsAndPauses(){try(var r=start("menu")){
+        var pad=new GamepadInput();
+        for(int i=0;i<3;i++){pad.button("a",true);pad.apply(r);r.update(.01,0,0);pad.button("a",false);pad.apply(r);r.update(.01,0,0);}
+        assertEquals("normal-1",r.scene.id);var player=r.scene.objects.stream().filter(e->e.id.equals("alex")).findFirst().orElseThrow();double y=player.y;
+        pad.button("a",true);pad.apply(r);r.update(.05,0,0);assertTrue(player.y>y);pad.button("a",false);pad.apply(r);
+        pad.button("start",true);pad.apply(r);r.update(.01,0,0);assertTrue(r.paused);pad.button("start",false);pad.apply(r);r.update(0,0,0);
+        pad.button("start",true);pad.apply(r);r.update(.01,0,0);assertFalse(r.paused);
+    }}
     @Test void editorDefaultAndScriptUseTheSameUnlockProperty(){var source=Codec.copy(game);source.entrySceneId="menu-levels";var scene=source.scenes.stream().filter(s->s.id.equals(source.entrySceneId)).findFirst().orElseThrow();var h=scene.hud.stream().filter(x->x.id.equals("levels-level3")).findFirst().orElseThrow();assertFalse(h.booleanProperty("liberado",true));assertTrue(HudPresentation.asset(h).endsWith("-locked.png"));h.setBooleanProperty("liberado",true);assertFalse(HudPresentation.asset(h).endsWith("-locked.png"));try(var r=new megalodonte.engine.Runtime(source,megalodonte.engine.Runtime.reflection(compiler.loader),new megalodonte.engine.Runtime.Events(){})){press(r,"levels-level3");assertEquals("normal-3",r.scene.id);}}
     @Test void lockedChoicesCannotBeOpenedByButtonsOrKeyboard(){try(var r=start("menu")){press(r,"start");press(r,"difficulty-hard");assertEquals("menu-difficulty",r.scene.id);press(r,"difficulty-normal");assertTrue(r.scene.hud.stream().anyMatch(h->h.id.equals("levels-level2")&&HudPresentation.asset(h).endsWith("-locked.png")));press(r,"levels-level2");press(r,"digit2");assertEquals("menu-levels",r.scene.id);press(r,"levels-level1");assertEquals("normal-1",r.scene.id);}}
     @Test void progressIsSavedAtGoalAndRestoredBeforeMenuStarts(){var saved=new HashMap<String,String>();var source=Codec.copy(game);source.entrySceneId="normal-1";var events=new megalodonte.engine.Runtime.Events(){public Map<String,String> loadState(){return Map.copyOf(saved);}public void saveState(Map<String,String> s){saved.clear();saved.putAll(s);}};

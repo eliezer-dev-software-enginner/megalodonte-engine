@@ -77,3 +77,21 @@ A lista **CENAS**, no canto superior direito, permite abrir qualquer cena direta
 A cobertura dos recursos do runtime pela interface e os fluxos de animação/mapas estão em [Recursos do editor](docs/EDITOR_FEATURES.md).
 
 Para preparar um APK/AAB release assinado pelo Android Studio, use **Android Release**. Configure `versionCode` e `versionName` em **Projeto** e siga [Android Release](docs/ANDROID_RELEASE.md).
+
+### Atalhos de edição da cena
+
+Com o foco na cena ou na lista de objetos e um objeto/HUD selecionado:
+
+- **Setas direcionais:** mover a seleção (0,1 unidade do mundo; HUD: 1 pixel de referência).
+- **Shift + seta:** mover com passo 10 vezes maior.
+- **Ctrl + seta:** ajuste fino, com passo 10 vezes menor.
+- **Espaço + arrasto esquerdo** ou **arrasto com botão do meio:** mover a vista da cena.
+- **Roda do mouse:** aproximar ou afastar a vista.
+
+Selecionar um objeto fora da vista pela lista centraliza a visualização nele. A navegação não altera a câmera do jogo. Durante o Play, as setas são enviadas ao jogo; nos campos de texto, mantêm sua função normal de edição.
+
+### Dados salvos e controles de jogo
+
+Os hosts Desktop, Play do editor e Android suportam `GameContext.exportSave(valores, callback)` e `importSave(validador, callback)`. O JSON versionado inclui o ID do jogo e o estado persistente, separado do documento `game.json`; a importação valida o conteúdo antes de salvar. No Android, a seleção usa o [Storage Access Framework](https://developer.android.com/training/data-storage/shared/documents-files), sem solicitar acesso geral ao armazenamento.
+
+Controles físicos são suportados no Android e no Desktop Linux, inclusive no Play do editor. Os scripts recebem `pad_left`, `pad_right`, `pad_up`, `pad_down`, `pad_a`, `pad_b` e `pad_start`; o analógico esquerdo e o direcional alimentam o movimento horizontal. Há zona morta de 20%, liberação de entradas ao desconectar/perder foco e proteção contra confirmação repetida ao trocar de cena segurando um botão. O Android usa as [entradas nativas de gamepad](https://developer.android.com/games/sdk/game-controller/controller-input); no Linux, o backend lê `/dev/input/js*` com o mapa de eixos/botões do kernel, via JNA. O sistema precisa reconhecer o dispositivo como controle físico.

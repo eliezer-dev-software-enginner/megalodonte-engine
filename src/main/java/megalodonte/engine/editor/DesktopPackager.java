@@ -17,7 +17,7 @@ public final class DesktopPackager {
             for(String entry:List.of("game.json","assets","scripts","licenses","LICENSE.txt","README.md","tools"))if(Files.exists(project.resolve(entry)))copy(project.resolve(entry),snapshot.resolve(entry));
             try(var compiler=ScriptCompiler.compile(snapshot)){if(compiler.classesDirectory()!=null)jar(compiler.classesDirectory(),input.resolve("game-scripts.jar"));}
             delete(snapshot.resolve(".engine"));
-            ScriptCompiler.copyJar(DesktopLauncher.class,input.resolve("engine-player.jar"));ScriptCompiler.copyJar(Game.class,input.resolve("engine-core.jar"));ScriptCompiler.copyJar(com.google.gson.Gson.class,input.resolve("gson.jar"));
+            ScriptCompiler.copyJar(DesktopLauncher.class,input.resolve("engine-player.jar"));ScriptCompiler.copyJar(Game.class,input.resolve("engine-core.jar"));ScriptCompiler.copyJar(com.google.gson.Gson.class,input.resolve("gson.jar"));ScriptCompiler.copyJar(com.sun.jna.Native.class,input.resolve("jna.jar"));
             for(String item:System.getProperty("java.class.path").split(java.io.File.pathSeparator)){Path file=Path.of(item);if(Files.isRegularFile(file)&&file.getFileName().toString().startsWith("javafx-"))Files.copy(file,input.resolve(file.getFileName()),StandardCopyOption.REPLACE_EXISTING);}
             Path jdk=Path.of(System.getProperty("java.home"));String suffix=System.getProperty("os.name").startsWith("Windows")?".exe":"";
             Path runtime=temporary.resolve("runtime");run(List.of(jdk.resolve("bin/jlink"+suffix).toString(),"--add-modules","java.se,jdk.unsupported","--strip-debug","--no-header-files","--no-man-pages","--output",runtime.toString()));

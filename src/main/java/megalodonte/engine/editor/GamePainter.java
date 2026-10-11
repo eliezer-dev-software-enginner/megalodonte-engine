@@ -29,6 +29,7 @@ final class GamePainter {
             if(image!=null)g.drawImage(image,box.x(),box.y(),box.width(),box.height());
             else if(hud.type.equals("button")){g.setFill(Color.web("#245878"));g.fillRoundRect(box.x(),box.y(),box.width(),box.height(),8,8);}
             if(!hud.type.equals("image")){g.setFill(Color.web(hud.color));g.setFont(Font.font("Monospaced",hud.fontSize*box.scale()));g.setTextBaseline(javafx.geometry.VPos.TOP);g.fillText(hud.text,box.x()+4*box.scale(),box.y()+4*box.scale());}
+            if(hud.focused){g.setStroke(Color.web("#00ff00"));g.setLineWidth(3);g.strokeRect(box.x()+2,box.y()+2,box.width()-4,box.height()-4);}
             g.restore();
         }
         if(runtime.fadeAlpha()>0){g.setFill(Color.color(0,0,0,runtime.fadeAlpha()));g.fillRect(0,0,canvas.getWidth(),canvas.getHeight());}

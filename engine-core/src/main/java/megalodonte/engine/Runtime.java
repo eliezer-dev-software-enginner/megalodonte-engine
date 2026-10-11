@@ -5,7 +5,7 @@ public final class Runtime implements AutoCloseable {
     private final Game baseline;
     public Game.Scene scene;
     public interface ScriptFactory { GameScript create(String className) throws Exception; }
-    public interface Events { default void log(String message){} default void playSound(String assetPath){} default void pauseAudio(boolean paused){} default void muteAudio(boolean muted){} default void quit(){} default java.util.Map<String,String> loadState(){return java.util.Map.of();} default void saveState(java.util.Map<String,String> state){} }
+    public interface Events { default void exportSave(String json,java.util.function.Consumer<String> done){done.accept("Exportação indisponível neste host.");} default void importSave(java.util.function.BiConsumer<String,String> done){done.accept(null,"Importação indisponível neste host.");} default void log(String message){} default void playSound(String assetPath){} default void pauseAudio(boolean paused){} default void muteAudio(boolean muted){} default void quit(){} default java.util.Map<String,String> loadState(){return java.util.Map.of();} default void saveState(java.util.Map<String,String> state){} }
     private final ScriptFactory factory;
     public final Events events;
     public double horizontal, vertical, elapsed;
@@ -60,7 +60,7 @@ public final class Runtime implements AutoCloseable {
         var after=Hierarchy.pose(scene,entity);return new Movement(after.x()-before.x(),after.y()-before.y(),bx,by);
     }
     private boolean move(Game.Entity e,double dx,double dy){
-        var world=Hierarchy.pose(scene,e);double x=Math.max(0,Math.min(scene.worldWidth-e.width,world.x()+dx)),y=Math.max(0,Math.min(scene.worldHeight-e.height,world.y()+dy));
+        var world=Hierarchy.pose(scene,e);var area=collisionBounds(scene,e);double x=world.x()+Math.max(-area.x(),Math.min(scene.worldWidth-area.x()-area.width(),dx)),y=world.y()+Math.max(-area.y(),Math.min(scene.worldHeight-area.y()-area.height(),dy));
         if(blocked(e,x-world.x(),y-world.y())){
             double low=0,high=1;for(int i=0;i<15;i++){double mid=(low+high)/2;if(blocked(e,(x-world.x())*mid,(y-world.y())*mid))high=mid;else low=mid;}
             Hierarchy.setWorldPosition(scene,e,world.x()+(x-world.x())*low,world.y()+(y-world.y())*low);return true;
@@ -68,25 +68,34 @@ public final class Runtime implements AutoCloseable {
         Hierarchy.setWorldPosition(scene,e,x,y);return Math.abs(x-world.x()-dx)>1e-9||Math.abs(y-world.y()-dy)>1e-9;
     }
     public boolean blocked(Game.Entity e,double dx,double dy){
-        var world=Hierarchy.pose(scene,e);if(world.y()+dy<0||world.x()+dx<0||world.x()+dx+e.width>scene.worldWidth)return true;
+        var area=collisionBounds(scene,e);if(area.y()+dy<0||area.x()+dx<0||area.x()+dx+area.width()>scene.worldWidth)return true;
         for(var member:scene.objects)if(Hierarchy.descendant(scene,member,e)){
             var bounds=collisionBounds(scene,member).translate(dx,dy);
             for(var map:scene.tileMaps)for(var obstacle:map.obstacles){
                 double x=map.x+obstacle.x*map.unitScale,y=map.y+obstacle.y*map.unitScale;
                 if(overlaps(bounds.x(),bounds.y(),bounds.width(),bounds.height(),x,y,obstacle.width*map.unitScale,obstacle.height*map.unitScale))return true;
             }
-            for(var other:scene.objects)if(other.solid&&!Hierarchy.descendant(scene,other,e)&&!Hierarchy.descendant(scene,e,other)&&overlaps(bounds,collisionBounds(scene,other)))return true;
+            for(var other:scene.objects)if(other.solid&&!other.trigger&&!Hierarchy.descendant(scene,other,e)&&!Hierarchy.descendant(scene,e,other)&&overlaps(bounds,collisionBounds(scene,other)))return true;
         }return false;
     }
     public record CollisionRect(double x,double y,double width,double height){
         public CollisionRect translate(double dx,double dy){return new CollisionRect(x+dx,y+dy,width,height);}
     }
     public static CollisionRect collisionBounds(Game.Scene scene,Game.Entity entity){
-        var pose=Hierarchy.pose(scene,entity);return new CollisionRect(pose.x()+entity.colliderOffsetX,pose.y()+entity.colliderOffsetY,entity.colliderWidth>0?entity.colliderWidth:entity.width,entity.colliderHeight>0?entity.colliderHeight:entity.height);
+        var pose=Hierarchy.pose(scene,entity);return collisionBounds(entity,pose.x(),pose.y(),pose.rotation());
+    }
+    private static CollisionRect collisionBounds(Game.Entity e,double x,double y,double rotation){
+        double w=e.colliderWidth>0?e.colliderWidth:e.width,h=e.colliderHeight>0?e.colliderHeight:e.height;
+        double cx=e.colliderOffsetX+w/2-e.width/2,cy=e.colliderOffsetY+h/2-e.height/2;
+        if(e.flipX)cx=-cx;
+        double angle=Math.toRadians(rotation%360),cos=Math.cos(angle),sin=Math.sin(angle);
+        double centerX=x+e.width/2+cx*cos+cy*sin,centerY=y+e.height/2-cx*sin+cy*cos;
+        double width=Math.abs(cos)*w+Math.abs(sin)*h,height=Math.abs(sin)*w+Math.abs(cos)*h;
+        return new CollisionRect(centerX-width/2,centerY-height/2,width,height);
     }
     public static boolean overlaps(CollisionRect a,CollisionRect b){return overlaps(a.x,a.y,a.width,a.height,b.x,b.y,b.width,b.height);}
     private static boolean overlaps(double ax,double ay,double aw,double ah,double bx,double by,double bw,double bh){return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&ay+ah>by;}
     public static boolean overlaps(Game.Entity a, Game.Entity b) {
-        return a.x < b.x+b.width && a.x+a.width > b.x && a.y < b.y+b.height && a.y+a.height > b.y;
+        return a.solid&&b.solid&&overlaps(collisionBounds(a,a.x,a.y,a.rotation),collisionBounds(b,b.x,b.y,b.rotation));
     }
 }

@@ -26,6 +26,8 @@ public final class Editor extends ViewScript {
     private boolean compiling;
     private final Set<String> heldHud=new HashSet<>();
     private double panX,panY;
+    private boolean panning;
+    private final EditorNavigation navigation = new EditorNavigation();
     private boolean resizingHud;
     private boolean draggingSelection;
     private double hudDragX, hudDragY;
@@ -48,6 +50,7 @@ public final class Editor extends ViewScript {
     private boolean disposed;
     private boolean saved;
     private boolean showColliders,previewAnimations;
+    private final LinuxGamepad gamepad=new LinuxGamepad();
     private double previewClock;
     private Game.Scene scene() { return runtime == null ? game.scenes.get(sceneIndex) : runtime.scene; }
     @Override public void onSubmit() { applyObject(); }
@@ -56,13 +59,14 @@ public final class Editor extends ViewScript {
         canvas=new Canvas(720,480);canvas.getGraphicsContext2D().setImageSmoothing(false); canvas.setManaged(false); host.getChildren().add(canvas);
         canvas.widthProperty().bind(host.widthProperty()); canvas.heightProperty().bind(host.heightProperty());
         canvas.setFocusTraversable(true);
-        canvas.setOnKeyPressed(e -> {keys.add(e.getCode());if(runtime!=null)runtime.setAction(e.getCode().name().toLowerCase(Locale.ROOT),true);if(e.getCode()==KeyCode.ESCAPE){pendingParentChild=null;message("Vínculo cancelado.");}}); canvas.setOnKeyReleased(e -> {keys.remove(e.getCode());if(runtime!=null)runtime.setAction(e.getCode().name().toLowerCase(Locale.ROOT),false);});
-        canvas.focusedProperty().addListener((o,a,b)-> { if(!b) { if(runtime!=null){for(var key:keys)runtime.setAction(key.name().toLowerCase(Locale.ROOT),false);for(var action:heldHud)runtime.setAction(action,false);}keys.clear();heldHud.clear();draggingSelection=false; } });
+        Tooltip.install(canvas,new Tooltip("Mover vista: segure Espaço e arraste com o botão esquerdo, ou arraste com o botão do meio. Roda: zoom. Setas: mover seleção; Shift: passo maior; Ctrl: ajuste fino. Selecionar na lista revela o objeto."));
+        canvas.setOnKeyPressed(e -> {if(nudgeSelection(e))return;keys.add(e.getCode());if(runtime!=null)runtime.setAction(e.getCode().name().toLowerCase(Locale.ROOT),true);if(e.getCode()==KeyCode.ESCAPE){pendingParentChild=null;message("Vínculo cancelado.");}}); canvas.setOnKeyReleased(e -> {keys.remove(e.getCode());if(runtime!=null)runtime.setAction(e.getCode().name().toLowerCase(Locale.ROOT),false);});
+        canvas.focusedProperty().addListener((o,a,b)-> { if(!b) { if(runtime!=null){for(var key:keys)runtime.setAction(key.name().toLowerCase(Locale.ROOT),false);for(var action:heldHud)runtime.setAction(action,false);}keys.clear();heldHud.clear();panning=false;draggingSelection=false; } });
         canvas.setOnMousePressed(e -> {
             draggingSelection=false;
             canvas.requestFocus();
             if(runtime!=null){for(var hud:runtime.scene.hud)if(hud.visible&&HudPresentation.enabled(hud)&&hud.type.equals("button")&&HudLayout.resolve(hud,canvas.getWidth(),canvas.getHeight()).contains(e.getX(),e.getY())){String action=hud.action.isBlank()?hud.id:hud.action;runtime.setAction(action,true);heldHud.add(action);}return;}
-            if(e.getButton()==MouseButton.MIDDLE){panX=e.getX();panY=e.getY();return;}
+            if(e.getButton()==MouseButton.MIDDLE || (e.getButton()==MouseButton.PRIMARY && keys.contains(KeyCode.SPACE))){panning=true;panX=e.getX();panY=e.getY();return;}
             if(e.getButton()!=MouseButton.PRIMARY && e.getButton()!=MouseButton.SECONDARY)return;
             draggingSelection=e.getButton()==MouseButton.PRIMARY;
             resizingHud=false;
@@ -84,7 +88,7 @@ public final class Editor extends ViewScript {
             else{selected=null;inspect();}
         });
         canvas.setOnMouseDragged(e -> {
-            if(runtime==null&&e.isMiddleButtonDown()&&scale>0){scene().camera.mode="fixed";scene().camera.x-=(e.getX()-panX)/scale;scene().camera.y+=(e.getY()-panY)/scale;panX=e.getX();panY=e.getY();inspectScene();return;}
+            if(runtime==null&&panning&&scale>0){navigation.pan(scene(),(e.getX()-panX)/scale,(e.getY()-panY)/scale);panX=e.getX();panY=e.getY();draw();return;}
             if(runtime!=null || !draggingSelection || !e.isPrimaryButtonDown() || e.isSecondaryButtonDown())return;
             if(selectedHud!=null){
                 var b=HudLayout.resolve(selectedHud,canvas.getWidth(),canvas.getHeight());
@@ -94,8 +98,8 @@ public final class Editor extends ViewScript {
                 inspectHud();
             }else if(selected!=null){Hierarchy.setWorldPosition(scene(),selected,(e.getX()-ox)/scale-dragX,(oy-e.getY())/scale-dragY);inspect();}
         });
-        canvas.setOnMouseReleased(e -> { if(runtime!=null)for(String action:heldHud)runtime.setAction(action,false);heldHud.clear();draggingSelection=false; resizingHud=false; });
-        canvas.setOnScroll(e->{if(runtime==null){scene().camera.zoom=Math.max(0.05,Math.min(20,scene().camera.zoom*Math.exp(e.getDeltaY()*0.002)));inspectScene();}});
+        canvas.setOnMouseReleased(e -> { if(runtime!=null)for(String action:heldHud)runtime.setAction(action,false);heldHud.clear();panning=false;draggingSelection=false; resizingHud=false; });
+        canvas.setOnScroll(e->{if(runtime==null){navigation.zoom(scene(),e.getDeltaY());draw();}});
         sceneList=new ListView<>();sceneList.setId("sceneSelector");sceneList.setMaxSize(Double.MAX_VALUE,Double.MAX_VALUE);
         sceneList.setCellFactory(list->new ListCell<>(){
             @Override protected void updateItem(Game.Scene item,boolean empty){super.updateItem(item,empty);setText(empty||item==null?null:(getIndex()+1)+". "+item.name+(item.id.equals(game.entrySceneId)?" • inicial":""));}
@@ -107,6 +111,7 @@ public final class Editor extends ViewScript {
         sceneList.getSelectionModel().selectedIndexProperty().addListener((o,previous,index)->{if(!updatingSceneList&&index.intValue()>=0)selectScene(index.intValue());});
         ((Pane)component("sceneList").getJavaFxNode()).getChildren().add(sceneList);
         tree=new VBox(6);
+        tree.setOnKeyPressed(this::nudgeSelection);
         ScrollPane objectsScroll=new ScrollPane(tree);
         objectsScroll.setFitToWidth(true);
         objectsScroll.setMinSize(0,0);
@@ -115,15 +120,33 @@ public final class Editor extends ViewScript {
         ((Pane)component("tree").getJavaFxNode()).getChildren().add(objectsScroll);
         timer=new AnimationTimer(){ public void handle(long now){
             double dt=last==0?0:(now-last)/1e9; last=now;if(runtime==null&&previewAnimations)previewClock+=Math.min(dt,.1);
-            if(runtime!=null)try{runtime.update(dt,axis(KeyCode.D,KeyCode.RIGHT)-axis(KeyCode.A,KeyCode.LEFT),axis(KeyCode.W,KeyCode.UP)-axis(KeyCode.S,KeyCode.DOWN));music.update(runtime.scene,path->pendingAssets.resolve(path,directory),Editor.this::message);}catch(Exception error){stop();message("Script/runtime: "+error.getMessage());}
+            if(runtime!=null)try{gamepad.poll(canvas.isFocused());gamepad.input.apply(runtime);runtime.update(dt,gamepad.input.horizontal()+axis(KeyCode.D,KeyCode.RIGHT)-axis(KeyCode.A,KeyCode.LEFT),axis(KeyCode.W,KeyCode.UP)-axis(KeyCode.S,KeyCode.DOWN));music.update(runtime.scene,path->pendingAssets.resolve(path,directory),Editor.this::message);}catch(Exception error){stop();message("Script/runtime: "+error.getMessage());}
             draw();
         }}; timer.start(); refresh(); restoreLastSaved();inspectScene();
+    }
+    private boolean nudgeSelection(javafx.scene.input.KeyEvent event){
+        if(runtime!=null || pendingParentChild!=null || (selected==null&&selectedHud==null))return false;
+        int dx=event.getCode()==KeyCode.RIGHT?1:event.getCode()==KeyCode.LEFT?-1:0;
+        int dy=event.getCode()==KeyCode.UP?1:event.getCode()==KeyCode.DOWN?-1:0;
+        if(dx==0&&dy==0)return false;
+        double multiplier=event.isShiftDown()?10:event.isControlDown()?.1:1;
+        if(selectedHud!=null){
+            var box=HudLayout.resolve(selectedHud,canvas.getWidth(),canvas.getHeight());
+            if(box.scale()<=0)return false;
+            HudLayout.position(selectedHud,box.x()+dx*multiplier*box.scale(),box.y()-dy*multiplier*box.scale(),canvas.getWidth(),canvas.getHeight());
+            inspectHud();
+        }else{
+            var pose=Hierarchy.pose(scene(),selected);
+            Hierarchy.setWorldPosition(scene(),selected,pose.x()+dx*.1*multiplier,pose.y()+dy*.1*multiplier);
+            inspect();navigation.reveal(scene(),selected,canvas.getWidth(),canvas.getHeight());
+        }
+        draw();event.consume();return true;
     }
     private int axis(KeyCode a,KeyCode b){return keys.contains(a)||keys.contains(b)?1:0;}
     private void draw(){
         var s=scene(); var g=canvas.getGraphicsContext2D();
         g.setFill(Color.web("#0c1420"));g.fillRect(0,0,canvas.getWidth(),canvas.getHeight());
-        var view=CameraView.of(s.camera,canvas.getWidth(),canvas.getHeight());scale=view.scale();ox=view.originX();oy=view.originY();
+        var view=CameraView.of(runtime==null?navigation.camera(s):s.camera,canvas.getWidth(),canvas.getHeight());scale=view.scale();ox=view.originX();oy=view.originY();
         g.save();g.beginPath();g.rect(view.screenX(view.left()),view.screenY(view.bottom()+view.height()),view.width()*scale,view.height()*scale);g.clip();
         g.setFill(Color.web(s.background));g.fillRect(ox,oy-s.worldHeight*scale,s.worldWidth*scale,s.worldHeight*scale);
         if(runtime==null){g.setStroke(Color.web("#ffffff18")); for(int i=(int)Math.max(0,Math.floor(view.left()));i<=Math.min(s.worldWidth,view.left()+view.width());i++)g.strokeLine(ox+i*scale,oy,ox+i*scale,oy-s.worldHeight*scale);for(int i=(int)Math.max(0,Math.floor(view.bottom()));i<=Math.min(s.worldHeight,view.bottom()+view.height());i++)g.strokeLine(ox,oy-i*scale,ox+s.worldWidth*scale,oy-i*scale);}
@@ -141,7 +164,7 @@ public final class Editor extends ViewScript {
         }
         if(runtime==null&&(showColliders||selected!=null)){
             g.save();g.setStroke(Color.web("#ffcc66"));g.setLineDashes(4,3);
-            for(var e:s.objects)if((showColliders&&e.solid)||e==selected){var b=megalodonte.engine.Runtime.collisionBounds(s,e);g.strokeRect(ox+b.x()*scale,oy-(b.y()+b.height())*scale,b.width()*scale,b.height()*scale);}
+            for(var e:s.objects)if(e.solid&&(showColliders||e==selected)){var b=megalodonte.engine.Runtime.collisionBounds(s,e);g.strokeRect(ox+b.x()*scale,oy-(b.y()+b.height())*scale,b.width()*scale,b.height()*scale);}
             if(showColliders)for(var map:s.tileMaps)for(var b:map.obstacles)g.strokeRect(ox+(map.x+b.x*map.unitScale)*scale,oy-(map.y+(b.y+b.height)*map.unitScale)*scale,b.width*map.unitScale*scale,b.height*map.unitScale*scale);
             g.restore();
         }
@@ -171,6 +194,7 @@ public final class Editor extends ViewScript {
                 if(image!=null&&!image.isError())g.drawImage(image,b.x(),b.y(),b.width(),b.height());
                 else{g.fillRect(b.x(),b.y(),b.width(),b.height());}}
             g.restore();
+            if(runtime!=null&&h.focused){g.setStroke(Color.LIME);g.setLineWidth(3);g.strokeRect(b.x()+2,b.y()+2,b.width()-4,b.height()-4);}
             if(runtime==null && h==selectedHud){g.setStroke(Color.CYAN);g.setLineWidth(2);g.strokeRect(b.x(),b.y(),b.width(),b.height());g.setFill(Color.CYAN);g.fillRect(b.x()+b.width()-6,b.y()+b.height()-6,12,12);}
         }
     }
@@ -235,9 +259,9 @@ public final class Editor extends ViewScript {
             return asset;
         }catch(Exception e){message("Falha ao importar imagem: "+e.getMessage());return null;}
     }
-    private void inspect(){set("hudSelected",false);set("worldSelected",true);if(selected==null)return;set("name",selected.name);set("x",""+selected.x);set("y",""+selected.y);set("width",""+selected.width);set("height",""+selected.height);set("color",selected.color);set("speed",""+selected.speed);set("rotation",""+selected.rotation);set("objectScript",selected.scriptClassName.isBlank()?"Script: nenhum":"Script: "+selected.scriptClassName);set("parentName",selected.parentId.isEmpty()?"Pai: nenhum":"Pai: "+Hierarchy.find(scene(),selected.parentId).name);message("Selecionado: "+selected.name+" • controlável="+selected.player+" • colisor="+selected.solid);}
-    private void refresh(){refreshSceneList();draw();tree.getChildren().clear();for(var e:game.scenes.get(sceneIndex).objects){Button b=new Button((e.parentId.isEmpty()?"":"↳ ")+e.name);b.setMaxWidth(Double.MAX_VALUE);b.setOnAction(event->selectObject(e));tree.getChildren().add(b);}for(var map:game.scenes.get(sceneIndex).tileMaps){Button b=new Button("Mapa • "+map.name);b.setOnAction(e->{stop();selected=null;selectedHud=null;set("hudSelected",false);set("worldSelected",true);selectedMap=map;set("mapSelected",true);set("mapX",""+map.x);set("mapY",""+map.y);set("mapScale",""+map.unitScale);message("Mapa selecionado: "+map.name);});tree.getChildren().add(b);}for(var h:game.scenes.get(sceneIndex).hud){Button b=new Button("HUD • "+(h.type.equals("text")?h.text:h.id));b.setOnAction(event->{stop();pendingParentChild=null;selected=null;selectedHud=h;inspectHud();});tree.getChildren().add(b);}set("projectPath",directory==null?"Projeto: ainda não salvo":"Projeto: "+directory.resolve("game.json").toAbsolutePath().normalize());set("project",game.name+" • "+game.scenes.get(sceneIndex).name+" • inicial: "+game.entrySceneId+" • "+(directory==null?"não salvo":directory));}
-    private void stop(){playGeneration++;compiling=false;if(runtime!=null)runtime.close();runtime=null;if(scriptCompiler!=null){scriptCompiler.close();scriptCompiler=null;}music.close();music.pause(false);music.mute(false);keys.clear();heldHud.clear();last=0;}
+    private void inspect(){set("hudSelected",false);set("worldSelected",true);if(selected==null)return;set("name",selected.name);set("x",""+selected.x);set("y",""+selected.y);set("width",""+selected.width);set("height",""+selected.height);set("color",selected.color);set("speed",""+selected.speed);set("rotation",""+selected.rotation);set("objectScript",selected.scriptClassName.isBlank()?"Script: nenhum":"Script: "+selected.scriptClassName);set("parentName",selected.parentId.isEmpty()?"Pai: nenhum":"Pai: "+Hierarchy.find(scene(),selected.parentId).name);message("Selecionado: "+selected.name+" • controlável="+selected.player+" • colisor="+selected.solid+" • gatilho="+selected.trigger);}
+    private void refresh(){refreshSceneList();draw();tree.getChildren().clear();for(var e:game.scenes.get(sceneIndex).objects){Button b=new Button((e.parentId.isEmpty()?"":"↳ ")+e.name);b.setMaxWidth(Double.MAX_VALUE);b.setOnAction(event->{selectObject(e);navigation.reveal(scene(),selected,canvas.getWidth(),canvas.getHeight());draw();});tree.getChildren().add(b);}for(var map:game.scenes.get(sceneIndex).tileMaps){Button b=new Button("Mapa • "+map.name);b.setOnAction(e->{stop();selected=null;selectedHud=null;set("hudSelected",false);set("worldSelected",true);selectedMap=map;set("mapSelected",true);set("mapX",""+map.x);set("mapY",""+map.y);set("mapScale",""+map.unitScale);message("Mapa selecionado: "+map.name);});tree.getChildren().add(b);}for(var h:game.scenes.get(sceneIndex).hud){Button b=new Button("HUD • "+(h.type.equals("text")?h.text:h.id));b.setOnAction(event->{stop();pendingParentChild=null;selected=null;selectedHud=h;inspectHud();});tree.getChildren().add(b);}set("projectPath",directory==null?"Projeto: ainda não salvo":"Projeto: "+directory.resolve("game.json").toAbsolutePath().normalize());set("project",game.name+" • "+game.scenes.get(sceneIndex).name+" • inicial: "+game.entrySceneId+" • "+(directory==null?"não salvo":directory));}
+    private void stop(){gamepad.close();playGeneration++;compiling=false;if(runtime!=null)runtime.close();runtime=null;if(scriptCompiler!=null){scriptCompiler.close();scriptCompiler=null;}music.close();music.pause(false);music.mute(false);keys.clear();heldHud.clear();last=0;}
     public void togglePlay(){
         pendingParentChild=null;
         if(runtime!=null||compiling){stop();message("Play encerrado; edição preservada.");return;}
@@ -263,6 +287,8 @@ public final class Editor extends ViewScript {
             public void quit(){javafx.application.Platform.runLater(()->stop());}
             public java.util.Map<String,String> loadState(){return playerState.load();}
             public void saveState(java.util.Map<String,String> state){playerState.save(state);}
+            public void exportSave(String json,java.util.function.Consumer<String> done){javafx.application.Platform.runLater(()->SaveFiles.export(canvas.getScene().getWindow(),json,done));}
+            public void importSave(java.util.function.BiConsumer<String,String> done){javafx.application.Platform.runLater(()->SaveFiles.load(canvas.getScene().getWindow(),done));}
             public void muteAudio(boolean muted){music.mute(muted);}
         });canvas.requestFocus();message("Play: cena inicial • WASD/setas e ações HUD.");
     }

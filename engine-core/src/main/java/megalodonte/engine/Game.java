@@ -25,7 +25,7 @@ public final class Game {
         public String id = UUID.randomUUID().toString(), name = "Objeto", color = "#56b6c2", assetPath = "";
         public String parentId = "", scriptClassName = "";
         public double x = 2, y = 2, width = 1, height = 1, speed = 4, rotation = 0;
-        public boolean solid = true, player = false, visible = true, flipX = false;
+        public boolean solid = true, trigger = false, player = false, visible = true, flipX = false;
         public double colliderOffsetX, colliderOffsetY, colliderWidth, colliderHeight;
         public Map<String, Animation> animations = new LinkedHashMap<>();
         public String animation = "";
@@ -44,7 +44,7 @@ public final class Game {
         public String assetPath = "", color = "#ffffff", horizontalAnchor = "left", verticalAnchor = "top";
         public String referenceArea = "viewport";
         public String scriptClassName = "", action = "";
-        public boolean visible = true;
+        public boolean visible = true, focused = false;
         public double offsetX = 24, offsetY = 24, width = 300, height = 48, fontSize = 32;
         public Map<String,com.google.gson.JsonPrimitive> properties = new LinkedHashMap<>();
         public HudCondition condition = new HudCondition();
