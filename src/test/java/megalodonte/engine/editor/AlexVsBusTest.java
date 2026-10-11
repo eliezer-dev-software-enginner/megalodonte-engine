@@ -57,6 +57,39 @@ class AlexVsBusTest {
         for(int i=0;i<80;i++)r.update(.025,0,0);
         assertEquals(stableX,player.x,.001);assertEquals(stableY,player.y,.001,"Respawn must settle on safe ground");
     }}
+    @Test void ropeBarTravelsWithPlayerAndReturnsAfterRelease(){try(var r=start("normal-3")){
+        var player=Hierarchy.find(r.scene,"alex");var rope=r.scene.objects.stream().filter(e->e.properties.getOrDefault("kind","").equals("rope")).findFirst().orElseThrow();
+        double origin=rope.x;player.x=rope.x-player.colliderOffsetX;player.y=rope.y-.5;
+        r.update(0,0,0);assertEquals("rope",player.animation);
+        for(int i=0;i<20;i++){
+            r.update(.025,0,0);assertEquals(rope.x-19.0/24,player.x,.001,"Player and rope must move together");
+        }
+        assertTrue(rope.x>origin+4);
+        r.setAction("space",true);r.update(.025,0,0);r.setAction("space",false);assertEquals("jump",player.animation);
+        for(int i=0;i<120;i++)r.update(.05,0,0);
+        assertEquals(origin,rope.x,.001,"Released rope must return to its initial position");
+    }}
+    @Test void everyHoleEdgeSupportsPlayerAcrossItsSurface(){
+        int checked=0;
+        for(var level:game.scenes)if(level.camera.targetId.equals("alex"))try(var r=start(level.id)){
+            var player=Hierarchy.find(r.scene,"alex");
+            for(var hole:r.scene.objects)if(hole.properties.getOrDefault("kind","").equals("hole")){
+                for(double edge:new double[]{hole.x,hole.x+hole.width-1})for(double offset:new double[]{.05,.25,.5,.75,.95}){
+                    player.x=edge+offset-player.colliderOffsetX-player.colliderWidth/2;player.y=7-player.colliderOffsetY;
+                    assertTrue(r.blocked(player,0,-.01),"Missing edge support: "+level.id+" at "+(edge+offset));checked++;
+                }
+            }
+        }
+        assertEquals(2480,checked);
+        for(String id:new String[]{"normal-3","hard-3","normal-4","hard-4"})try(var r=start(id)){
+            var player=Hierarchy.find(r.scene,"alex");double start=id.endsWith("-3")?360:120;
+            for(double center=start+.05;center<start+2;center+=.1){
+                player.x=center-player.colliderOffsetX-player.colliderWidth/2;player.y=7-player.colliderOffsetY;
+                for(int i=0;i<12;i++)r.update(.025,0,0);
+                assertEquals(7-player.colliderOffsetY,player.y,.001,"Player falls through platform: "+id+" at "+center);
+            }
+        }
+    }
     @Test void allCheckpointsHaveStableRespawn(){
         int checked=0;
         for(var level:game.scenes)if(level.camera.targetId.equals("alex"))try(var r=start(level.id)){

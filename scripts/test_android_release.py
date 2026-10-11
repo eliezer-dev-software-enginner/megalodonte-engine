@@ -25,6 +25,9 @@ class ReleaseExportTest(unittest.TestCase):
             (game / 'game.json').write_text(json.dumps(metadata))
             project = release.prepare(engine, game)
             self.assertTrue((project / 'engine-core/src/main/java/megalodonte/engine/Game.java').is_file())
+            import xml.etree.ElementTree as ET
+            application = ET.parse(project / 'app/src/main/AndroidManifest.xml').getroot().find('application')
+            self.assertEqual('game', application.attrib['{http://schemas.android.com/apk/res/android}appCategory'])
             self.assertEqual('// script', (project / 'scripts/Test.java').read_text())
             properties = (project / 'gradle.properties').read_text()
             self.assertIn('gameAssets=../game', properties)

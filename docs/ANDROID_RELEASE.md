@@ -59,3 +59,5 @@ cópia antes de gerar a distribuição assinada.
 A exportação detecta o SDK por `ANDROID_HOME`, `ANDROID_SDK_ROOT` ou pela pasta padrão `~/Android/Sdk` (Linux) / `~/Library/Android/sdk` (macOS) e gera `local.properties` com `sdk.dir`. Esse arquivo fica ignorado pelo Git. Ao mover a exportação para outra máquina, ajuste o caminho para o SDK instalado nela.
 
 O botão **Configurações** abre a página Android com o campo **SDK Android** e um seletor de pastas. **Salvar configurações** valida a pasta, persiste a preferência local e atualiza `local.properties` da exportação existente do jogo aberto. As novas exportações e as builds Android usam o caminho escolhido. A configuração fica em `~/.config/megalodonte-engine/android-sdk.txt`, separada de `game.json`.
+
+Os projetos Android exportados declaram `android:appCategory="game"` no elemento `<application>`, identificando o aplicativo como jogo.
