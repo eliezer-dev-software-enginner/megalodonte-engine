@@ -5,10 +5,13 @@ public final class Runtime implements AutoCloseable {
     private final Game baseline;
     public Game.Scene scene;
     public interface ScriptFactory { GameScript create(String className) throws Exception; }
-    public interface Events { default void exportSave(String json,java.util.function.Consumer<String> done){done.accept("Exportação indisponível neste host.");} default void importSave(java.util.function.BiConsumer<String,String> done){done.accept(null,"Importação indisponível neste host.");} default void log(String message){} default void playSound(String assetPath){} default void pauseAudio(boolean paused){} default void muteAudio(boolean muted){} default void quit(){} default java.util.Map<String,String> loadState(){return java.util.Map.of();} default void saveState(java.util.Map<String,String> state){} }
+    public interface Events { default void exportSave(String json,java.util.function.Consumer<String> done){done.accept("Exportação indisponível neste host.");} default void importSave(java.util.function.BiConsumer<String,String> done){done.accept(null,"Importação indisponível neste host.");} default void log(String message){} default void playSound(String assetPath){} default void playSound(String assetPath,double volume){playSound(assetPath);} default void pauseAudio(boolean paused){} default void muteAudio(boolean muted){} default void quit(){} default java.util.Map<String,String> loadState(){return java.util.Map.of();} default void saveState(java.util.Map<String,String> state){} }
     private final ScriptFactory factory;
     public final Events events;
-    public double horizontal, vertical, elapsed;
+    public double horizontal, vertical, elapsed, soundVolume = 1;
+    private double fpsSeconds, fps;
+    private int fpsFrames;
+    public double framesPerSecond(){return fps;}
     public boolean paused;
     public final java.util.Map<String,String> state=new java.util.HashMap<>();
     final java.util.Set<String> pressed=new java.util.HashSet<>(),down=new java.util.HashSet<>(),released=new java.util.HashSet<>();
@@ -37,8 +40,8 @@ public final class Runtime implements AutoCloseable {
     private void attach(String name,Game.Entity e,Game.Hud h){if(name.isBlank())return;
         try{var attachment=new Attachment(factory.create(name),new GameContext(this,e,h));scripts.add(attachment);if(e!=null)objectScripts.put(e,attachment);attachment.script.onStart(attachment.context);}
         catch(Exception error){throw new IllegalStateException("Falha no script "+name+": "+error.getMessage(),error);}}
-    private void startScripts(){try{attach(scene.scriptClassName,null,null);for(var e:scene.objects)attach(e.scriptClassName,e,null);for(var h:scene.hud)attach(h.scriptClassName,null,h);}
-        catch(RuntimeException error){destroyScripts();throw error;}}
+    private void startScripts(){boolean before=updating;updating=true;obstacles.refreshFast(scene);hasParents=scene.objects.stream().anyMatch(e->!e.parentId.isEmpty());try{attach(scene.scriptClassName,null,null);for(var e:scene.objects)attach(e.scriptClassName,e,null);for(var h:scene.hud)attach(h.scriptClassName,null,h);}
+        catch(RuntimeException error){destroyScripts();throw error;}finally{updating=before;}}
     private void destroyScripts(){for(int i=scripts.size()-1;i>=0;i--)try{scripts.get(i).script.onDestroy(scripts.get(i).context);}catch(Exception e){events.log("onDestroy: "+e.getMessage());}scripts.clear();objectScripts.clear();}
     void requestScene(String id){if(game.scenes.stream().noneMatch(s->s.id.equals(id)))throw new IllegalArgumentException("Cena inexistente: "+id);nextScene=id;}
     public void setAction(String action,boolean held){if(held){if(down.add(action))pressed.add(action);}else if(down.remove(action))released.add(action);}
@@ -46,6 +49,7 @@ public final class Runtime implements AutoCloseable {
     @Override public void close(){if(closed)return;closed=true;destroyScripts();down.clear();pressed.clear();released.clear();}
     public void update(double dt, double horizontal, double vertical) {
         if(closed)return;
+        if(Double.isFinite(dt)&&dt>0){fpsSeconds+=dt;fpsFrames++;if(fpsSeconds>=.5){fps=fpsFrames/fpsSeconds;fpsSeconds=0;fpsFrames=0;}}
         obstacles.refreshFast(scene);hasParents=scene.objects.stream().anyMatch(e->!e.parentId.isEmpty());updating=true;
         try{
         dt = Math.max(0, Math.min(dt, 0.05));if(paused)dt=0;elapsed+=dt;
@@ -88,6 +92,25 @@ public final class Runtime implements AutoCloseable {
         for(int i=0;i<steps;i++){if(!bx)bx=move(entity,dx/steps,0);if(!by)by=move(entity,0,dy/steps);}
         var after=Hierarchy.pose(scene,entity);return new Movement(after.x()-before.x(),after.y()-before.y(),bx,by);
     }
+    /** Recover a body authored inside geometry. Bounded search, preferring up on equal distances. */
+    public boolean resolvePenetration(Game.Entity entity,double maxDistance){
+        if(!Double.isFinite(maxDistance)||maxDistance<0||maxDistance>10)throw new IllegalArgumentException("Distância de separação inválida");
+        if(!blocked(entity,0,0))return true;
+        double best=Double.POSITIVE_INFINITY,bx=0,by=0;
+        for(double[] direction:new double[][]{{0,1},{-1,0},{1,0},{0,-1}}){
+            double previous=0;
+            for(double distance=Math.min(.05,maxDistance);distance>0;distance=Math.min(maxDistance,distance+.05)){
+                double dx=direction[0]*distance,dy=direction[1]*distance;var area=collisionBounds(scene,entity).translate(dx,dy);
+                if(area.y()+area.height()<=scene.worldHeight&&!blocked(entity,dx,dy)){
+                    double low=previous,high=distance;
+                    for(int i=0;i<16;i++){double middle=(low+high)/2;if(blocked(entity,direction[0]*middle,direction[1]*middle))low=middle;else high=middle;}
+                    if(high<best){best=high;bx=direction[0]*(high+1e-6);by=direction[1]*(high+1e-6);}break;
+                }
+                if(distance>=maxDistance||distance>=best)break;previous=distance;
+            }
+        }
+        if(!Double.isFinite(best))return false;var pose=Hierarchy.pose(scene,entity);Hierarchy.setWorldPosition(scene,entity,pose.x()+bx,pose.y()+by);return true;
+    }
     private boolean move(Game.Entity e,double dx,double dy){
         var world=Hierarchy.pose(scene,e);var area=collisionBounds(scene,e);double x=world.x()+Math.max(-area.x(),Math.min(scene.worldWidth-area.x()-area.width(),dx)),y=world.y()+Math.max(-area.y(),Math.min(scene.worldHeight-area.y()-area.height(),dy));
         if(blocked(e,x-world.x(),y-world.y())){
@@ -99,7 +122,7 @@ public final class Runtime implements AutoCloseable {
     public boolean blocked(Game.Entity e,double dx,double dy){
         var area=collisionBounds(scene,e);if(area.y()+dy<0||area.x()+dx<0||area.x()+dx+area.width()>scene.worldWidth)return true;
         if(!updating){obstacles.refresh(scene);hasParents=scene.objects.stream().anyMatch(entity->!entity.parentId.isEmpty());}else obstacles.refreshFast(scene);
-        if(!hasParents)return blockedMember(e,e,dx,dy);
+        if(!hasParents||!scene.objects.contains(e))return blockedMember(e,e,dx,dy);
         for(var member:scene.objects)if(Hierarchy.descendant(scene,member,e)&&blockedMember(e,member,dx,dy))return true;
         return false;
     }

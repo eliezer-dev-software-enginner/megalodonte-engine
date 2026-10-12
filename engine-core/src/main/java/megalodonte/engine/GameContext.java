@@ -20,6 +20,10 @@ public final class GameContext {
         return Runtime.overlaps(collisionBounds(a),new Runtime.CollisionRect(area.x()-margin,area.y()-margin,area.width()+margin*2,area.height()+margin*2));
     }
     public void invalidateCollisionGeometry(){runtime.invalidateCollisionGeometry();}
+    public double framesPerSecond(){return runtime.framesPerSecond();}
+    public void setSoundVolume(double volume){if(!Double.isFinite(volume)||volume<0||volume>1)throw new IllegalArgumentException("Volume inválido");runtime.soundVolume=volume;}
+    public boolean blocked(Game.Entity target,double dx,double dy){return runtime.blocked(target,dx,dy);}
+    public boolean resolvePenetration(Game.Entity target,double distance){return runtime.resolvePenetration(target,distance);}
     public boolean grounded(Game.Entity target){return runtime.blocked(target,0,-0.01);}
     public void animate(Game.Entity target,String name){Sprites.play(target,name);}
     public java.util.Map<String,String> state(){return runtime.state;}
@@ -45,5 +49,5 @@ public final class GameContext {
     public void pressAction(String action){runtime.pressed.add(action);}
     public void changeScene(String id){runtime.requestScene(id);}
     public void log(String message){runtime.events.log(message);}
-    public void playSound(String assetPath){Codec.validateAsset(assetPath);runtime.events.playSound(assetPath);}
+    public void playSound(String assetPath){Codec.validateAsset(assetPath);runtime.events.playSound(assetPath,runtime.soundVolume);}
 }

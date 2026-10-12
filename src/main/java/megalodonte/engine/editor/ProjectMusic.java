@@ -25,9 +25,10 @@ final class ProjectMusic implements AutoCloseable {
             var player=music;player.setOnError(()->errors.accept("Áudio: "+player.getError().getMessage()));if(!paused)player.play();
         }catch(Exception e){errors.accept("Áudio: "+e.getMessage());}
     }
-    void sound(Path path){if(path==null||muted||paused)return;
+    void sound(Path path){sound(path,1);}
+    void sound(Path path,double volume){if(path==null||muted||paused)return;
         if(!effects.containsKey(path)&&effects.size()>=64){var iterator=effects.values().iterator();iterator.next().stop();iterator.remove();}
-        effects.computeIfAbsent(path,p->new AudioClip(p.toUri().toString())).play();
+        effects.computeIfAbsent(path,p->new AudioClip(p.toUri().toString())).play(volume);
     }
     @Override public void close(){if(music!=null){music.stop();music.dispose();music=null;}for(var clip:effects.values())clip.stop();effects.clear();sceneId="";effectsScene=null;}
 }

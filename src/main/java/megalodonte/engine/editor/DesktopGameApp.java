@@ -33,6 +33,7 @@ public final class DesktopGameApp extends Application {
         var playerState=new PlayerState(game.applicationId);
         runtime=new megalodonte.engine.Runtime(game,megalodonte.engine.Runtime.reflection(getClass().getClassLoader()),new megalodonte.engine.Runtime.Events(){
             public void playSound(String asset){audio.sound(project.resolve(asset));}
+                public void playSound(String asset,double volume){audio.sound(project.resolve(asset),volume);}
             public void log(String message){System.out.println(message);}
             public void pauseAudio(boolean value){audio.pause(value);}
             public void quit(){javafx.application.Platform.exit();}

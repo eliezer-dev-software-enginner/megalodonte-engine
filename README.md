@@ -127,3 +127,7 @@ O runtime usa um índice espacial para colisões dos mapas, faz culling antes de
 Se um script editar a geometria de um obstáculo existente no mapa durante o jogo, chame `c.invalidateCollisionGeometry()` após a edição. Alterar posição/escala do mapa ou adicionar/remover obstáculos é detectado automaticamente. Colisores de entidades móveis continuam consultados com seus valores atuais. `Runtime.collisionCandidates()` permite acompanhar quantos candidatos de mapa foram examinados.
 
 Objetos têm `opacity` (0 a 1), disponível em **Objeto • colisor e propriedades**, permitindo fades sem ocultar a figura de uma vez. O diagnóstico e as medições da campanha Final Roz estão em `games/final-roz-game-megalodonte/docs/PERFORMANCE.md`, relativo ao diretório `megalodonte-world`.
+
+O runtime expõe `GameContext.framesPerSecond()`, medido com o delta real do host antes do clamp da física e da pausa. Scripts podem usar `setSoundVolume(0..1)` para controlar o ganho dos efeitos sem alterar a música. Os hosts Desktop/editor e Android aplicam esse ganho; implementações antigas de `Events.playSound(String)` continuam compatíveis.
+
+`GameContext.resolvePenetration(entity, maxDistance)` oferece recuperação explícita e limitada de uma posição inicial dentro de geometria, preservando a posição quando não há saída próxima. `blocked(entity, dx, dy)` permite sondar apoio/passagem sem alterar a posição do ator. A recuperação não é executada automaticamente em cada movimento.

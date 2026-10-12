@@ -295,6 +295,7 @@ public final class Editor extends ViewScript {
         runtime=new megalodonte.engine.Runtime(snapshot,megalodonte.engine.Runtime.reflection(loader),new megalodonte.engine.Runtime.Events(){
             public void log(String text){javafx.application.Platform.runLater(()->{if(!disposed)message(text);});}
             public void playSound(String path){music.sound(pendingAssets.resolve(path,directory));}
+            public void playSound(String path,double volume){music.sound(pendingAssets.resolve(path,directory),volume);}
             public void pauseAudio(boolean paused){music.pause(paused);}
             public void quit(){javafx.application.Platform.runLater(()->stop());}
             public java.util.Map<String,String> loadState(){return playerState.load();}

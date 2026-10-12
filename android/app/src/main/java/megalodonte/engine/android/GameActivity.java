@@ -74,7 +74,8 @@ public final class GameActivity extends Activity {
         final android.media.SoundPool effects=new android.media.SoundPool.Builder().setMaxStreams(12)
             .setAudioAttributes(new android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_GAME).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION).build()).build();
         final Map<String,Integer> samples=new HashMap<>();
-        final Set<Integer> readySamples=new HashSet<>(),pendingSounds=new HashSet<>();
+        final Set<Integer> readySamples=new HashSet<>();
+        final Map<Integer,Float> pendingSounds=new HashMap<>();
         final java.util.ArrayDeque<Integer> streams=new java.util.ArrayDeque<>();
         Game.Scene soundScene;
         final Set<String> loadingImages=new HashSet<>(),failedImages=new HashSet<>();
@@ -84,7 +85,7 @@ public final class GameActivity extends Activity {
         boolean muted;boolean audioPaused;boolean active=true;long last;double dx,dy;
         GameView(Game game){super(GameActivity.this);paint.setFilterBitmap(false);
             effects.setOnLoadCompleteListener((pool,id,status)->{
-                if(disposed||!samples.containsValue(id))return;if(status==0){readySamples.add(id);if(pendingSounds.remove(id))playSample(id);}
+                if(disposed||!samples.containsValue(id))return;if(status==0){readySamples.add(id);var volume=pendingSounds.remove(id);if(volume!=null)playSample(id,volume);}
                 else pendingSounds.remove(id);
             });
             runtime=new megalodonte.engine.Runtime(game,megalodonte.engine.Runtime.reflection(getClass().getClassLoader()),new megalodonte.engine.Runtime.Events(){
@@ -93,7 +94,8 @@ public final class GameActivity extends Activity {
                 public void exportSave(String json,java.util.function.Consumer<String> done){exportSaveFile(json,done);}
                 public void importSave(java.util.function.BiConsumer<String,String> done){importSaveFile(done);}
                 public void log(String message){android.util.Log.i("MegalodonteScript",message);}
-                public void playSound(String asset){sound(asset);}
+                public void playSound(String asset){sound(asset,1);}
+                public void playSound(String asset,double volume){sound(asset,(float)volume);}
                 public void quit(){GameActivity.this.finish();}
                 public void muteAudio(boolean value){muted=value;if(music!=null){float v=value?0:(float)runtime.scene.musicVolume;music.setVolume(v,v);}if(value){for(int stream:streams)effects.stop(stream);streams.clear();pendingSounds.clear();}}
                 public void pauseAudio(boolean value){audioPaused=value;if(music!=null&&musicReady){if(value)music.pause();else if(active)music.start();}if(value){effects.autoPause();pendingSounds.clear();}else if(active)effects.autoResume();}
@@ -133,12 +135,12 @@ public final class GameActivity extends Activity {
                 effects.unload(entry.getValue());readySamples.remove(entry.getValue());pendingSounds.remove(entry.getValue());iterator.remove();}}
             for(String asset:wanted)loadSound(asset);
         }
-        void playSample(int id){if(muted||audioPaused||!active||disposed)return;
-            int stream=effects.play(id,1,1,1,0,1);if(stream!=0){streams.addLast(stream);while(streams.size()>12)effects.stop(streams.removeFirst());}
+        void playSample(int id,float volume){if(muted||audioPaused||!active||disposed)return;
+            int stream=effects.play(id,volume,volume,1,0,1);if(stream!=0){streams.addLast(stream);while(streams.size()>12)effects.stop(streams.removeFirst());}
         }
         MediaPlayer audio(String asset)throws Exception{MediaPlayer player=new MediaPlayer();try(var fd=getAssets().openFd(asset)){player.setDataSource(fd.getFileDescriptor(),fd.getStartOffset(),fd.getLength());}catch(Exception e){player.release();throw e;}return player;}
-        void sound(String asset){if(muted||audioPaused||!active||disposed)return;
-            int sample=loadSound(asset);if(sample==0)return;if(readySamples.contains(sample))playSample(sample);else pendingSounds.add(sample);
+        void sound(String asset,float volume){if(muted||audioPaused||!active||disposed)return;
+            int sample=loadSound(asset);if(sample==0)return;if(readySamples.contains(sample))playSample(sample,volume);else pendingSounds.put(sample,volume);
         }
         void updateMusic(){
             if(music!=null){float volume=muted?0:(float)runtime.scene.musicVolume;music.setVolume(volume,volume);}
