@@ -19,6 +19,7 @@ public final class GameContext {
         var area=collisionBounds(b);
         return Runtime.overlaps(collisionBounds(a),new Runtime.CollisionRect(area.x()-margin,area.y()-margin,area.width()+margin*2,area.height()+margin*2));
     }
+    public void invalidateCollisionGeometry(){runtime.invalidateCollisionGeometry();}
     public boolean grounded(Game.Entity target){return runtime.blocked(target,0,-0.01);}
     public void animate(Game.Entity target,String name){Sprites.play(target,name);}
     public java.util.Map<String,String> state(){return runtime.state;}

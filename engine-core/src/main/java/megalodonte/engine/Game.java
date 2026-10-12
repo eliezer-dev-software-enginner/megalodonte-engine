@@ -29,6 +29,7 @@ public final class Game {
         public int drawLayer = 0;
         public double x = 2, y = 2, width = 1, height = 1, speed = 4, rotation = 0;
         public boolean solid = true, trigger = false, player = false, visible = true, flipX = false, colliderFollowsFlip = true;
+        public double opacity = 1;
         public double colliderOffsetX, colliderOffsetY, colliderWidth, colliderHeight;
         /** Local polygon vertices as x,y pairs; empty uses the rectangular collider. */
         public List<Double> colliderPolygon = new ArrayList<>();

@@ -43,7 +43,7 @@ public final class Editor extends ViewScript {
     private megalodonte.engine.Runtime runtime;
     private final Set<KeyCode> keys = new HashSet<>();
     private final PendingAssets pendingAssets = new PendingAssets();
-    private final Map<String,Image> images = new HashMap<>();
+    private final Map<String,Image> images = new ImageCache();
     private double scale, ox, oy, dragX, dragY;
     private long last;
     private Process androidBuild;
@@ -157,11 +157,11 @@ public final class Editor extends ViewScript {
         if(runtime==null){g.setStroke(Color.web("#ffffff18")); for(int i=(int)Math.max(0,Math.floor(view.left()));i<=Math.min(s.worldWidth,view.left()+view.width());i++)g.strokeLine(ox+i*scale,oy,ox+i*scale,oy-s.worldHeight*scale);for(int i=(int)Math.max(0,Math.floor(view.bottom()));i<=Math.min(s.worldHeight,view.bottom()+view.height());i++)g.strokeLine(ox,oy-i*scale,ox+s.worldWidth*scale,oy-i*scale);}
         TileDraw.render(s,view,(tile,x,y,w,h,alpha,a,b,c,d)->{Image image=assetImage(tile.assetPath);if(image==null||image.isError())return;g.save();g.setGlobalAlpha(alpha);g.translate(x+w/2,y+h/2);g.scale(w,h);g.transform(a,b,c,d,0,0);g.drawImage(image,tile.sourceX,tile.sourceY,tile.width,tile.height,-0.5,-0.5,1,1);g.restore();});
         if(runtime==null){for(var map:s.tileMaps){g.setStroke(Color.web("#ffcc66"));g.strokeRect(ox+map.x*scale,oy-(map.y+map.rows*map.tileHeight*map.unitScale)*scale,map.columns*map.tileWidth*map.unitScale*scale,map.rows*map.tileHeight*map.unitScale*scale);}}
-        for(var e:DrawOrder.entities(s)){if(runtime!=null&&!e.visible)continue;var pose=Hierarchy.pose(s,e);double x=ox+pose.x()*scale,y=oy-(pose.y()+e.height)*scale;
+        for(var e:runtime==null?DrawOrder.entities(s):DrawOrder.visibleEntities(s,view)){if(runtime!=null&&!e.visible)continue;var pose=Hierarchy.pose(s,e);double x=ox+pose.x()*scale,y=oy-(pose.y()+e.height)*scale;
             if(x+e.width*scale<0||x>canvas.getWidth()||y+e.height*scale<0||y>canvas.getHeight())continue;
             Image image=null;
             String sprite=Sprites.asset(e,runtime==null&&previewAnimations?e.animationTime+previewClock:e.animationTime);if(!sprite.isBlank())image=assetImage(sprite);
-            g.save();if(!e.visible)g.setGlobalAlpha(.35);double cx=x+e.width*scale/2,cy=y+e.height*scale/2;
+            g.save();g.setGlobalAlpha(e.visible?e.opacity:.35);double cx=x+e.width*scale/2,cy=y+e.height*scale/2;
             g.translate(cx,cy);g.rotate(pose.rotation()%360);if(e.flipX)g.scale(-1,1);g.translate(-cx,-cy);
             if(image!=null&&!image.isError())g.drawImage(image,x,y,e.width*scale,e.height*scale);
             else{g.setFill(Color.web(e.color));g.fillRect(x,y,e.width*scale,e.height*scale);}

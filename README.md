@@ -119,3 +119,11 @@ Objetos adicionados a `context.scene().objects` com `scriptClassName` recebem `o
 Documentos são copiados diretamente, sem criar strings JSON intermediárias de todos os tiles. No Android, bitmaps são carregados sob demanda e o cache mantém até 64 MiB, com uma exceção para uma única imagem maior. Textos HUD aceitam quebras de linha nos três hosts. Gamepads expõem também `pad_x`, `pad_y`, `pad_l1` e `pad_r1`.
 
 A aparência dos botões HUD também é declarativa: fundo, opacidade, raio dos cantos, família da fonte e alinhamento horizontal/vertical são editáveis em **HUD → Visibilidade / tipo / imagem → Opções**. A área `content` mantém a composição centralizada de menus e histórias em telas largas; controles de jogo podem usar `viewport` para alcançar as bordas seguras.
+
+### Otimizações de execução
+
+O runtime usa um índice espacial para colisões dos mapas, faz culling antes de ordenar sprites, mantém apenas a cena ativa como cópia mutável e limita os caches de imagens. Android decodifica sprites em segundo plano e usa SoundPool para efeitos curtos; Desktop reutiliza AudioClip. A música Android é preparada de forma assíncrona.
+
+Se um script editar a geometria de um obstáculo existente no mapa durante o jogo, chame `c.invalidateCollisionGeometry()` após a edição. Alterar posição/escala do mapa ou adicionar/remover obstáculos é detectado automaticamente. Colisores de entidades móveis continuam consultados com seus valores atuais. `Runtime.collisionCandidates()` permite acompanhar quantos candidatos de mapa foram examinados.
+
+Objetos têm `opacity` (0 a 1), disponível em **Objeto • colisor e propriedades**, permitindo fades sem ocultar a figura de uma vez. O diagnóstico e as medições da campanha Final Roz estão em `games/final-roz-game-megalodonte/docs/PERFORMANCE.md`, relativo ao diretório `megalodonte-world`.

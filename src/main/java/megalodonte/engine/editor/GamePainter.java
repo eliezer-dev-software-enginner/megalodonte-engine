@@ -19,10 +19,10 @@ final class GamePainter {
         TileDraw.render(scene,view,(tile,x,y,w,h,alpha,a,b,c,d)->{
             var image=images.apply(tile.assetPath);if(image==null)return;g.save();g.setGlobalAlpha(alpha);g.translate(x+w/2,y+h/2);g.scale(w,h);g.transform(a,b,c,d,0,0);g.drawImage(image,tile.sourceX,tile.sourceY,tile.width,tile.height,-.5,-.5,1,1);g.restore();
         });
-        for(var entity:DrawOrder.entities(scene)){if(!entity.visible)continue;var pose=Hierarchy.pose(scene,entity);
+        for(var entity:DrawOrder.visibleEntities(scene,view)){if(!entity.visible)continue;var pose=Hierarchy.pose(scene,entity);
             double x=view.screenX(pose.x()),y=view.screenY(pose.y()+entity.height),w=entity.width*scale,h=entity.height*scale;
-            if(x+w<0||x>canvas.getWidth()||y+h<0||y>canvas.getHeight())continue;
-            g.save();g.translate(x+w/2,y+h/2);g.rotate(pose.rotation());if(entity.flipX)g.scale(-1,1);
+
+            g.save();g.setGlobalAlpha(entity.opacity);g.translate(x+w/2,y+h/2);g.rotate(pose.rotation());if(entity.flipX)g.scale(-1,1);
             var image=images.apply(Sprites.asset(entity));if(image!=null)g.drawImage(image,-w/2,-h/2,w,h);else{g.setFill(Color.web(entity.color));g.fillRect(-w/2,-h/2,w,h);}g.restore();
         }g.restore();
         for(var hud:scene.hud){if(!hud.visible)continue;var box=HudLayout.resolve(hud,canvas.getWidth(),canvas.getHeight());g.save();g.beginPath();g.rect(box.x(),box.y(),box.width(),box.height());g.clip();

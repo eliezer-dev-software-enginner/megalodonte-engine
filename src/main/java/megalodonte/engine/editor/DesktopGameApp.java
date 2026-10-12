@@ -20,7 +20,7 @@ public final class DesktopGameApp extends Application {
     private AnimationTimer timer;
     private final Set<KeyCode> keys=new HashSet<>();
     private final Set<String> mouseActions=new HashSet<>();
-    private final Map<String,Image> images=new HashMap<>();
+    private final Map<String,Image> images=new ImageCache();
     private Path project;
     private boolean failed;
     private final LinuxGamepad gamepad=new LinuxGamepad();
@@ -60,7 +60,7 @@ public final class DesktopGameApp extends Application {
         };
         stage.show();timer.start();
     }
-    private Image image(String asset){if(asset==null||asset.isBlank())return null;return images.computeIfAbsent(asset,key->new Image(project.resolve(key).toUri().toString()));}
+    private Image image(String asset){if(asset==null||asset.isBlank())return null;return images.computeIfAbsent(asset,key->new Image(project.resolve(key).toUri().toString(),true));}
     private void releaseMouse(){for(var action:mouseActions)runtime.setAction(action,false);mouseActions.clear();}
     @Override public void stop(){if(timer!=null)timer.stop();if(runtime!=null)runtime.close();gamepad.close();audio.close();images.clear();}
 }

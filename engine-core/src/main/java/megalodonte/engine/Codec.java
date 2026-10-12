@@ -39,7 +39,7 @@ public final class Codec {
                 if (e.color == null || !e.color.matches("#[0-9a-fA-F]{6}")) throw new IllegalArgumentException("Cor inválida");
             }
             for(var e:scene.objects){
-                if(e.animation==null||e.animations==null||e.properties==null||!Double.isFinite(e.animationTime)||e.animationTime<0||!Double.isFinite(e.colliderOffsetX)||!Double.isFinite(e.colliderOffsetY)||!Double.isFinite(e.colliderWidth)||!Double.isFinite(e.colliderHeight)||e.colliderWidth<0||e.colliderHeight<0)throw new IllegalArgumentException("Sprite/colisor inválido");
+                if(!Double.isFinite(e.opacity)||e.opacity<0||e.opacity>1||e.animation==null||e.animations==null||e.properties==null||!Double.isFinite(e.animationTime)||e.animationTime<0||!Double.isFinite(e.colliderOffsetX)||!Double.isFinite(e.colliderOffsetY)||!Double.isFinite(e.colliderWidth)||!Double.isFinite(e.colliderHeight)||e.colliderWidth<0||e.colliderHeight<0)throw new IllegalArgumentException("Sprite/colisor inválido");
                 CollisionGeometry.validate(e.colliderPolygon);
                 for(var animation:e.animations.values()){if(animation==null||animation.frames==null||animation.frames.isEmpty()||!positive(animation.fps))throw new IllegalArgumentException("Animação inválida");for(var frame:animation.frames)validateAsset(frame);}
             }

@@ -16,11 +16,21 @@ public final class Runtime implements AutoCloseable {
     private final java.util.List<Attachment> scripts=new java.util.ArrayList<>();
     private final java.util.Map<Game.Entity,Attachment> objectScripts=new java.util.IdentityHashMap<>();
     private String nextScene;
-    private boolean closed;
+    private boolean closed, updating, hasParents;
+    private final ObstacleIndex obstacles=new ObstacleIndex();
+    /** Broad-phase candidates examined, useful for deterministic profiling. */
+    public long collisionCandidates(){return obstacles.candidates;}
+    /** Call after editing an existing map obstacle from a running script; transforms/count changes are automatic. */
+    public void invalidateCollisionGeometry(){obstacles.invalidate();hasParents=scene.objects.stream().anyMatch(e->!e.parentId.isEmpty());}
     public Runtime(Game source){this(source,name->{throw new IllegalArgumentException("Nenhum carregador de scripts configurado: "+name);},new Events(){});}
     public Runtime(Game source,ScriptFactory factory,Events events){
-        baseline=Codec.copy(source);game=Codec.copy(source);this.factory=factory;this.events=events;
+        baseline=Codec.copy(source);game=new Game();
+        // Retain one campaign snapshot; detach only the active scene instead of duplicating every level.
+        try{for(var field:Game.class.getFields())if(!field.getName().equals("scenes"))field.set(game,Codec.detached(field.get(baseline)));}
+        catch(IllegalAccessException error){throw new IllegalStateException(error);}
+        game.scenes=new java.util.ArrayList<>(baseline.scenes);this.factory=factory;this.events=events;
         scene=game.scenes.stream().filter(s->s.id.equals(game.entrySceneId)).findFirst().orElseThrow();
+        int initial=game.scenes.indexOf(scene);scene=Codec.detached(scene);game.scenes.set(initial,scene);
         state.putAll(events.loadState());startScripts();updateCamera(0);
     }
     public static ScriptFactory reflection(ClassLoader loader){return name->(GameScript)Class.forName(name,true,loader).getDeclaredConstructor().newInstance();}
@@ -36,6 +46,8 @@ public final class Runtime implements AutoCloseable {
     @Override public void close(){if(closed)return;closed=true;destroyScripts();down.clear();pressed.clear();released.clear();}
     public void update(double dt, double horizontal, double vertical) {
         if(closed)return;
+        obstacles.refreshFast(scene);hasParents=scene.objects.stream().anyMatch(e->!e.parentId.isEmpty());updating=true;
+        try{
         dt = Math.max(0, Math.min(dt, 0.05));if(paused)dt=0;elapsed+=dt;
         double length = Math.hypot(horizontal, vertical);
         if (length > 1) { horizontal /= length; vertical /= length; }
@@ -54,9 +66,12 @@ public final class Runtime implements AutoCloseable {
             scripts.remove(entry.getValue());objectScripts.remove(entry.getKey());
         }
         for(var entity:java.util.List.copyOf(scene.objects))if(!entity.scriptClassName.isBlank()&&!objectScripts.containsKey(entity))attach(entity.scriptClassName,entity,null);
-        for(var entity:scene.objects)entity.animationTime+=dt;
+        for(var entity:scene.objects)if(entity.visible&&!entity.animation.isBlank())entity.animationTime+=dt;
         updateCamera(dt);pressed.clear();released.clear();
-        if(nextScene!=null){String target=nextScene;nextScene=null;destroyScripts();int index=0;while(!baseline.scenes.get(index).id.equals(target))index++;scene=Codec.detached(baseline.scenes.get(index));game.scenes.set(index,scene);elapsed=0;paused=false;events.pauseAudio(false);down.clear();startScripts();updateCamera(0);}
+        if(nextScene!=null){String target=nextScene;nextScene=null;destroyScripts();
+            for(int previous=0;previous<game.scenes.size();previous++)if(game.scenes.get(previous)==scene){game.scenes.set(previous,baseline.scenes.get(previous));break;}
+            int index=0;while(!baseline.scenes.get(index).id.equals(target))index++;scene=Codec.detached(baseline.scenes.get(index));game.scenes.set(index,scene);elapsed=0;paused=false;events.pauseAudio(false);down.clear();startScripts();updating=false;updateCamera(0);}
+        }finally{updating=false;}
     }
     private void updateCamera(double dt){
         var camera=scene.camera;
@@ -83,14 +98,19 @@ public final class Runtime implements AutoCloseable {
     }
     public boolean blocked(Game.Entity e,double dx,double dy){
         var area=collisionBounds(scene,e);if(area.y()+dy<0||area.x()+dx<0||area.x()+dx+area.width()>scene.worldWidth)return true;
-        for(var member:scene.objects)if(Hierarchy.descendant(scene,member,e)){
-            var bounds=collisionBounds(scene,member).translate(dx,dy);
-            for(var map:scene.tileMaps)for(var obstacle:map.obstacles){
-                double x=map.x+obstacle.x*map.unitScale,y=map.y+obstacle.y*map.unitScale;
-                if(overlaps(bounds.x(),bounds.y(),bounds.width(),bounds.height(),x,y,obstacle.width*map.unitScale,obstacle.height*map.unitScale)&&CollisionGeometry.intersects(bounds,obstacle.colliderPolygon,x,y,map.unitScale))return true;
-            }
-            for(var other:scene.objects)if(other.solid&&!other.trigger&&!Hierarchy.descendant(scene,other,e)&&!Hierarchy.descendant(scene,e,other)&&overlaps(bounds,collisionBounds(scene,other))&&polygonContact(bounds,other))return true;
-        }return false;
+        if(!updating){obstacles.refresh(scene);hasParents=scene.objects.stream().anyMatch(entity->!entity.parentId.isEmpty());}else obstacles.refreshFast(scene);
+        if(!hasParents)return blockedMember(e,e,dx,dy);
+        for(var member:scene.objects)if(Hierarchy.descendant(scene,member,e)&&blockedMember(e,member,dx,dy))return true;
+        return false;
+    }
+    private boolean blockedMember(Game.Entity root,Game.Entity member,double dx,double dy){
+        var bounds=collisionBounds(scene,member).translate(dx,dy);
+        if(obstacles.intersects(bounds))return true;
+        for(var other:scene.objects)if(other.solid&&!other.trigger&&other!=root&&other!=member){
+            // Cheap AABB rejection before hierarchy checks or polygon narrow phase.
+            if(overlaps(bounds,collisionBounds(scene,other))&&(!hasParents||(!Hierarchy.descendant(scene,other,root)&&!Hierarchy.descendant(scene,root,other)))&&polygonContact(bounds,other))return true;
+        }
+        return false;
     }
     private boolean polygonContact(CollisionRect bounds,Game.Entity other){
         if(other.colliderPolygon.isEmpty())return true;
