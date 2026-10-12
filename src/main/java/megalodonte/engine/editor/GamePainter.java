@@ -9,6 +9,7 @@ import java.util.function.Function;
 
 /** Desktop game rendering without editor overlays. */
 final class GamePainter {
+    private static final SpriteFrameCache<Image> frames=new SpriteFrameCache<>();
     static void draw(Canvas canvas,megalodonte.engine.Runtime runtime,Function<String,Image> images){
         var scene=runtime.scene;var g=canvas.getGraphicsContext2D();g.setImageSmoothing(false);
         g.setFill(Color.BLACK);g.fillRect(0,0,canvas.getWidth(),canvas.getHeight());
@@ -19,11 +20,12 @@ final class GamePainter {
         TileDraw.render(scene,view,(tile,x,y,w,h,alpha,a,b,c,d)->{
             var image=images.apply(tile.assetPath);if(image==null)return;g.save();g.setGlobalAlpha(alpha);g.translate(x+w/2,y+h/2);g.scale(w,h);g.transform(a,b,c,d,0,0);g.drawImage(image,tile.sourceX,tile.sourceY,tile.width,tile.height,-.5,-.5,1,1);g.restore();
         });
-        for(var entity:DrawOrder.visibleEntities(scene,view)){if(!entity.visible)continue;var pose=Hierarchy.pose(scene,entity);
+        var visible=DrawOrder.visibleEntities(scene,view);frames.beginFrame(visible);
+        for(var entity:visible){if(!entity.visible)continue;var pose=Hierarchy.pose(scene,entity);
             double x=view.screenX(pose.x()),y=view.screenY(pose.y()+entity.height),w=entity.width*scale,h=entity.height*scale;
 
             g.save();g.setGlobalAlpha(entity.opacity);g.translate(x+w/2,y+h/2);g.rotate(pose.rotation());if(entity.flipX)g.scale(-1,1);
-            var image=images.apply(Sprites.asset(entity));if(image!=null)g.drawImage(image,-w/2,-h/2,w,h);else{g.setFill(Color.web(entity.color));g.fillRect(-w/2,-h/2,w,h);}g.restore();
+            var requested=images.apply(Sprites.asset(entity));var image=frames.select(entity,requested!=null&&requested.getProgress()>=1&&!requested.isError()&&requested.getWidth()>0?requested:null);if(image!=null)g.drawImage(image,-w/2,-h/2,w,h);else if(Sprites.asset(entity).isBlank()){g.setFill(Color.web(entity.color));g.fillRect(-w/2,-h/2,w,h);}g.restore();
         }g.restore();
         for(var hud:scene.hud){if(!hud.visible)continue;var box=HudLayout.resolve(hud,canvas.getWidth(),canvas.getHeight());g.save();g.beginPath();g.rect(box.x(),box.y(),box.width(),box.height());g.clip();
             var image=images.apply(HudPresentation.asset(hud));

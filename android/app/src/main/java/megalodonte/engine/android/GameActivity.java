@@ -63,11 +63,12 @@ public final class GameActivity extends Activity {
     }
     @Override protected void onPause(){super.onPause();clearGamepad();if(view!=null){view.active=false;view.clearInput();view.effects.autoPause();view.pendingSounds.clear();if(view.music!=null&&view.musicReady)view.music.pause();}}
     @Override protected void onResume(){super.onResume();if(view!=null){view.active=true;view.last=0;if(!view.audioPaused)view.effects.autoResume();if(view.music!=null&&view.musicReady&&!view.runtime.paused)view.music.start();view.postInvalidateOnAnimation();}}
-    @Override public void onTrimMemory(int level){super.onTrimMemory(level);if(view!=null){view.images.clear();view.imageBytes=0;}}
+    @Override public void onTrimMemory(int level){super.onTrimMemory(level);if(view!=null){view.images.clear();view.spriteFrames.clear();view.imageBytes=0;}}
     @Override protected void onDestroy(){if(controllerManager!=null)controllerManager.unregisterInputDeviceListener(controllerListener);if(view!=null)view.close();super.onDestroy();}
     private final class GameView extends View {
         final megalodonte.engine.Runtime runtime;
         final Paint paint=new Paint();
+        final SpriteFrameCache<Bitmap> spriteFrames=new SpriteFrameCache<>();
         final Map<String,Bitmap> images=new java.util.LinkedHashMap<>(32,.75f,true);
         long imageBytes;
         final long imageBudget=Math.min(24L*1024*1024,java.lang.Runtime.getRuntime().maxMemory()/8);
@@ -167,7 +168,8 @@ public final class GameActivity extends Activity {
             canvas.drawColor(Color.BLACK);canvas.save();canvas.clipRect((float)view.screenX(view.left()),(float)view.screenY(view.bottom()+view.height()),(float)view.screenX(view.left()+view.width()),(float)view.screenY(view.bottom()));paint.setColor(Color.parseColor(scene.background));paint.setAlpha(255);canvas.drawRect(ox,oy-(float)scene.worldHeight*scale,ox+(float)scene.worldWidth*scale,oy,paint);
             BackgroundDraw.render(scene,view,(asset,x,y,w,h)->{Bitmap bitmap=image(asset);if(bitmap!=null)canvas.drawBitmap(bitmap,null,new RectF((float)x,(float)y,(float)(x+w),(float)(y+h)),paint);});
             TileDraw.render(scene,view,(tile,x,y,w,h,alpha,a,b,c,d)->{Bitmap image=image(tile.assetPath);if(image==null)return;canvas.save();float left=(float)Math.floor(x),top=(float)Math.floor(y),right=(float)Math.ceil(x+w),bottom=(float)Math.ceil(y+h);canvas.translate((left+right)/2,(top+bottom)/2);canvas.scale(right-left,bottom-top);Matrix matrix=new Matrix();matrix.setValues(new float[]{(float)a,(float)c,0,(float)b,(float)d,0,0,0,1});canvas.concat(matrix);paint.setAlpha((int)(alpha*255));canvas.drawBitmap(image,new Rect(tile.sourceX,tile.sourceY,tile.sourceX+tile.width,tile.sourceY+tile.height),new RectF(-.5f,-.5f,.5f,.5f),paint);canvas.restore();});paint.setAlpha(255);
-            for(var e:DrawOrder.visibleEntities(scene,view)){if(!e.visible)continue;var pose=Hierarchy.pose(scene,e);RectF rect=new RectF(ox+(float)pose.x()*scale,oy-(float)(pose.y()+e.height)*scale,ox+(float)(pose.x()+e.width)*scale,oy-(float)pose.y()*scale);canvas.save();paint.setAlpha((int)(e.opacity*255));canvas.rotate((float)(pose.rotation()%360),rect.centerX(),rect.centerY());if(e.flipX)canvas.scale(-1,1,rect.centerX(),rect.centerY());prefetchFrames(e);Bitmap image=image(Sprites.asset(e));if(image!=null)canvas.drawBitmap(image,null,rect,paint);else if(Sprites.asset(e).isBlank()){paint.setColor(Color.parseColor(e.color));canvas.drawRect(rect,paint);}canvas.restore();paint.setAlpha(255);}
+            var visible=DrawOrder.visibleEntities(scene,view);spriteFrames.beginFrame(visible);
+            for(var e:visible){if(!e.visible)continue;var pose=Hierarchy.pose(scene,e);RectF rect=new RectF(ox+(float)pose.x()*scale,oy-(float)(pose.y()+e.height)*scale,ox+(float)(pose.x()+e.width)*scale,oy-(float)pose.y()*scale);canvas.save();paint.setAlpha((int)(e.opacity*255));canvas.rotate((float)(pose.rotation()%360),rect.centerX(),rect.centerY());if(e.flipX)canvas.scale(-1,1,rect.centerX(),rect.centerY());prefetchFrames(e);Bitmap image=spriteFrames.select(e,image(Sprites.asset(e)));if(image!=null)canvas.drawBitmap(image,null,rect,paint);else if(Sprites.asset(e).isBlank()){paint.setColor(Color.parseColor(e.color));canvas.drawRect(rect,paint);}canvas.restore();paint.setAlpha(255);}
             canvas.restore();
             for(var hud:scene.hud){if(!hud.visible)continue;String hudAsset=HudPresentation.asset(hud);loadImage(hudAsset);var b=HudLayout.resolve(hud,getWidth(),getHeight());canvas.save();canvas.clipRect((float)b.x(),(float)b.y(),(float)(b.x()+b.width()),(float)(b.y()+b.height()));
                 RectF rect=new RectF((float)b.x(),(float)b.y(),(float)(b.x()+b.width()),(float)(b.y()+b.height()));
@@ -196,6 +198,6 @@ public final class GameActivity extends Activity {
             return true;
         }
         void clearInput(){for(String action:held)runtime.setAction(action,false);held.clear();touchActions.clear();dx=dy=0;}
-        void close(){active=false;runtime.close();if(music!=null){music.release();music=null;}disposed=true;imageLoader.shutdownNow();effects.release();samples.clear();streams.clear();images.clear();loadingImages.clear();failedImages.clear();}
+        void close(){active=false;runtime.close();if(music!=null){music.release();music=null;}disposed=true;imageLoader.shutdownNow();effects.release();samples.clear();streams.clear();images.clear();spriteFrames.clear();loadingImages.clear();failedImages.clear();}
     }
 }
