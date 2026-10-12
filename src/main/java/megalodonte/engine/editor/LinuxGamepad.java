@@ -24,7 +24,7 @@ final class LinuxGamepad implements AutoCloseable {
             int n;
             while((n=libc.read(fd,event,8))==8){var buffer=ByteBuffer.wrap(event).order(ByteOrder.nativeOrder());double value=buffer.getShort(4)/32767.0;int type=event[6]&0x7f,index=event[7]&0xff;
                 if(type==2&&index<axes.length){switch(axes[index]&0xff){case 0->x=value;case 1->y=value;case 16->hx=value;case 17->hy=value;}}
-                else if(type==1&&index*2+1<buttons.length){int code=ByteBuffer.wrap(buttons).order(ByteOrder.nativeOrder()).getShort(index*2)&0xffff;String name=switch(code){case 0x130->"a";case 0x131->"b";case 0x13b->"start";case 0x220->"up";case 0x221->"down";case 0x222->"left";case 0x223->"right";default->"";};if(!name.isEmpty())input.button(name,event[4]!=0);}
+                else if(type==1&&index*2+1<buttons.length){int code=ByteBuffer.wrap(buttons).order(ByteOrder.nativeOrder()).getShort(index*2)&0xffff;String name=switch(code){case 0x130->"a";case 0x131->"b";case 0x133->"y";case 0x134->"x";case 0x136->"l1";case 0x137->"r1";case 0x13b->"start";case 0x220->"up";case 0x221->"down";case 0x222->"left";case 0x223->"right";default->"";};if(!name.isEmpty())input.button(name,event[4]!=0);}
             }
             if(n==0||(n<0&&Native.getLastError()!=11)){close();return;}
             if(active)input.axes(x,y,hx,hy);else input.clear();

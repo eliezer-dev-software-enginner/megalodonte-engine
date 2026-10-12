@@ -107,3 +107,15 @@ Controles físicos são suportados no Android e no Desktop Linux, inclusive no P
 Em **Configurações → Android**, informe o caminho do SDK ou use **Selecionar pasta…** e clique em **Salvar configurações**. A preferência é local ao computador. As builds Android usam esse SDK; `Projeto Android` gera `local.properties` com esse caminho para o Android Studio. Salvar a configuração também atualiza a exportação existente do jogo aberto.
 
 A opção **Cena / câmera → Manter chão enquadrado durante saltos** mantém a câmera vertical estável durante saltos comuns. Ela acompanha quedas e novos pisos ao aterrissar, e sobe quando necessário para manter o jogador no enquadramento. Está ativada nas fases de Alex vs Bus.
+
+### Polígonos, profundidade e objetos criados por scripts
+
+O campo `Entity.colliderPolygon` contém pares X,Y locais; vazio mantém o retângulo existente. Em obstáculos de tilemap, os pontos são locais ao obstáculo e recebem a escala do mapa. O editor de colisores e o formulário de objetos permitem editar os pontos. O runtime usa o retângulo para a primeira verificação e o polígono para confirmar o contato, preservando rampas sem bloquear sua área vazia.
+
+`Scene.depthSort` ordena pela base do colisor. `Entity.drawLayer` separa pisos e fundos dos atores: valores menores são desenhados primeiro. Ambos são editáveis na UI. `Scene.backgroundAssetPath` e `backgroundParallaxX` configuram a imagem panorâmica e seu deslocamento horizontal, usados pelo editor, Desktop e Android.
+
+Objetos adicionados a `context.scene().objects` com `scriptClassName` recebem `onStart` ao fim do frame de criação e `onUpdate` a partir do próximo. Removê-los encerra a anexação com `onDestroy`; sair da cena também encerra todos os scripts. Isso permite modelos editáveis de tiros, bombas e outros objetos temporários.
+
+Documentos são copiados diretamente, sem criar strings JSON intermediárias de todos os tiles. No Android, bitmaps são carregados sob demanda e o cache mantém até 64 MiB, com uma exceção para uma única imagem maior. Textos HUD aceitam quebras de linha nos três hosts. Gamepads expõem também `pad_x`, `pad_y`, `pad_l1` e `pad_r1`.
+
+A aparência dos botões HUD também é declarativa: fundo, opacidade, raio dos cantos, família da fonte e alinhamento horizontal/vertical são editáveis em **HUD → Visibilidade / tipo / imagem → Opções**. A área `content` mantém a composição centralizada de menus e histórias em telas largas; controles de jogo podem usar `viewport` para alcançar as bordas seguras.

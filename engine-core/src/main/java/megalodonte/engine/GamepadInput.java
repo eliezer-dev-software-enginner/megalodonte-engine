@@ -17,6 +17,6 @@ public final class GamepadInput {
         if(dx<-.5)actions.add("left");if(dx>.5)actions.add("right");if(dy<-.5)actions.add("up");if(dy>.5)actions.add("down");
         if(lastScene!=null&&lastScene!=runtime.scene)blocked.addAll(actions);lastScene=runtime.scene;
         blocked.retainAll(actions);
-        for(String name:List.of("left","right","up","down","a","b","start"))runtime.setAction("pad_"+name,actions.contains(name)&&!blocked.contains(name));
+        for(String name:List.of("left","right","up","down","a","b","x","y","l1","r1","start"))runtime.setAction("pad_"+name,actions.contains(name)&&!blocked.contains(name));
     }
 }

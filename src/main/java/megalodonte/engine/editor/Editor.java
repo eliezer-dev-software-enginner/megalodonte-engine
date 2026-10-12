@@ -79,7 +79,7 @@ public final class Editor extends ViewScript {
             set("hudSelected",false);
             double x=(e.getX()-ox)/scale, y=(oy-e.getY())/scale;
             Game.Entity hit=null;
-            var objects=scene().objects;
+            var objects=DrawOrder.entities(scene());
             for(int i=objects.size()-1;i>=0;i--){var obj=objects.get(i);if(EntityGeometry.contains(Hierarchy.worldEntity(scene(),obj),x,y)||obj.trigger&&containsCollider(scene(),obj,x,y)){hit=obj;break;}}
             if(hit!=null){boolean linking=pendingParentChild!=null;selectObject(hit);
                 if(linking){draggingSelection=false;return;}
@@ -153,10 +153,12 @@ public final class Editor extends ViewScript {
         var view=CameraView.of(runtime==null?navigation.camera(s):s.camera,canvas.getWidth(),canvas.getHeight());scale=view.scale();ox=view.originX();oy=view.originY();
         g.save();g.beginPath();g.rect(view.screenX(view.left()),view.screenY(view.bottom()+view.height()),view.width()*scale,view.height()*scale);g.clip();
         g.setFill(Color.web(s.background));g.fillRect(ox,oy-s.worldHeight*scale,s.worldWidth*scale,s.worldHeight*scale);
+        BackgroundDraw.render(s,view,(asset,x,y,w,h)->{var image=assetImage(asset);if(image!=null)g.drawImage(image,x,y,w,h);});
         if(runtime==null){g.setStroke(Color.web("#ffffff18")); for(int i=(int)Math.max(0,Math.floor(view.left()));i<=Math.min(s.worldWidth,view.left()+view.width());i++)g.strokeLine(ox+i*scale,oy,ox+i*scale,oy-s.worldHeight*scale);for(int i=(int)Math.max(0,Math.floor(view.bottom()));i<=Math.min(s.worldHeight,view.bottom()+view.height());i++)g.strokeLine(ox,oy-i*scale,ox+s.worldWidth*scale,oy-i*scale);}
         TileDraw.render(s,view,(tile,x,y,w,h,alpha,a,b,c,d)->{Image image=assetImage(tile.assetPath);if(image==null||image.isError())return;g.save();g.setGlobalAlpha(alpha);g.translate(x+w/2,y+h/2);g.scale(w,h);g.transform(a,b,c,d,0,0);g.drawImage(image,tile.sourceX,tile.sourceY,tile.width,tile.height,-0.5,-0.5,1,1);g.restore();});
         if(runtime==null){for(var map:s.tileMaps){g.setStroke(Color.web("#ffcc66"));g.strokeRect(ox+map.x*scale,oy-(map.y+map.rows*map.tileHeight*map.unitScale)*scale,map.columns*map.tileWidth*map.unitScale*scale,map.rows*map.tileHeight*map.unitScale*scale);}}
-        for(var e:s.objects){if(runtime!=null&&!e.visible)continue;var pose=Hierarchy.pose(s,e);double x=ox+pose.x()*scale,y=oy-(pose.y()+e.height)*scale;
+        for(var e:DrawOrder.entities(s)){if(runtime!=null&&!e.visible)continue;var pose=Hierarchy.pose(s,e);double x=ox+pose.x()*scale,y=oy-(pose.y()+e.height)*scale;
+            if(x+e.width*scale<0||x>canvas.getWidth()||y+e.height*scale<0||y>canvas.getHeight())continue;
             Image image=null;
             String sprite=Sprites.asset(e,runtime==null&&previewAnimations?e.animationTime+previewClock:e.animationTime);if(!sprite.isBlank())image=assetImage(sprite);
             g.save();if(!e.visible)g.setGlobalAlpha(.35);double cx=x+e.width*scale/2,cy=y+e.height*scale/2;
@@ -175,7 +177,7 @@ public final class Editor extends ViewScript {
                 g.fillText(e.name+(e.trigger?" • gatilho":!e.visible?" • oculto":""),ox+b.x()*scale+3,oy-(b.y()+b.height())*scale-4);
             }
             g.setStroke(Color.web("#ffcc66"));
-            if(showColliders)for(var map:s.tileMaps)for(var b:map.obstacles)g.strokeRect(ox+(map.x+b.x*map.unitScale)*scale,oy-(map.y+(b.y+b.height)*map.unitScale)*scale,b.width*map.unitScale*scale,b.height*map.unitScale*scale);
+            if(showColliders)for(var map:s.tileMaps)for(var b:map.obstacles){if(b.colliderPolygon.isEmpty())g.strokeRect(ox+(map.x+b.x*map.unitScale)*scale,oy-(map.y+(b.y+b.height)*map.unitScale)*scale,b.width*map.unitScale*scale,b.height*map.unitScale*scale);else{double[] xs=new double[b.colliderPolygon.size()/2],ys=new double[xs.length];for(int i=0;i<xs.length;i++){xs[i]=ox+(map.x+(b.x+b.colliderPolygon.get(i*2))*map.unitScale)*scale;ys[i]=oy-(map.y+(b.y+b.colliderPolygon.get(i*2+1))*map.unitScale)*scale;}g.strokePolygon(xs,ys,xs.length);}}
             g.restore();
         }
         if(runtime==null){
@@ -194,12 +196,12 @@ public final class Editor extends ViewScript {
         var g=canvas.getGraphicsContext2D();
         for(var h:scene().hud){if(!h.visible&&h!=selectedHud)continue;var b=HudLayout.resolve(h,canvas.getWidth(),canvas.getHeight());if(b.scale()<=0)continue;
             g.save();if(!h.visible)g.setGlobalAlpha(.35);g.beginPath();g.rect(b.x(),b.y(),b.width(),b.height());g.clip();
-            if(h.type.equals("button")&&HudPresentation.asset(h).isBlank()){g.setFill(Color.web("#245878"));g.fillRoundRect(b.x(),b.y(),b.width(),b.height(),8,8);}
+            if(h.type.equals("button")&&HudPresentation.asset(h).isBlank()){g.setFill(Color.web(h.buttonBackground,h.buttonOpacity));g.fillRoundRect(b.x(),b.y(),b.width(),b.height(),h.cornerRadius*b.scale(),h.cornerRadius*b.scale());}
             if(h.type.equals("button")&&!HudPresentation.asset(h).isBlank()){var buttonImage=assetImage(HudPresentation.asset(h));if(buttonImage!=null)g.drawImage(buttonImage,b.x(),b.y(),b.width(),b.height());}
             g.setFill(Color.web(h.color));
             if(h.type.equals("text")||h.type.equals("button")){
-                g.setFont(javafx.scene.text.Font.font(h.fontSize*b.scale()));g.setTextBaseline(javafx.geometry.VPos.TOP);
-                g.fillText(h.text,b.x(),b.y());
+                g.setFont(javafx.scene.text.Font.font(h.fontFamily.isBlank()?"System":h.fontFamily,h.fontSize*b.scale()));g.setTextBaseline(javafx.geometry.VPos.TOP);
+                var lines=h.text.split("\\R",-1);double lineHeight=h.fontSize*b.scale()*1.2,remaining=b.height()-lineHeight*lines.length;double lineY=b.y()+switch(h.textVerticalAlign){case "center"->remaining/2;case "bottom"->remaining;default->0;};g.setTextAlign(javafx.scene.text.TextAlignment.valueOf(h.textAlign.toUpperCase(java.util.Locale.ROOT)));double textX=b.x()+switch(h.textAlign){case "center"->b.width()/2;case "right"->b.width();default->0;};for(String line:lines){g.fillText(line,textX,lineY);lineY+=lineHeight;}
             }else{Image image=null;if(!HudPresentation.asset(h).isBlank())image=assetImage(HudPresentation.asset(h));
                 if(image!=null&&!image.isError())g.drawImage(image,b.x(),b.y(),b.width(),b.height());
                 else{g.fillRect(b.x(),b.y(),b.width(),b.height());}}

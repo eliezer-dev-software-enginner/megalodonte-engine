@@ -14,6 +14,7 @@ public final class Runtime implements AutoCloseable {
     final java.util.Set<String> pressed=new java.util.HashSet<>(),down=new java.util.HashSet<>(),released=new java.util.HashSet<>();
     private record Attachment(GameScript script,GameContext context){}
     private final java.util.List<Attachment> scripts=new java.util.ArrayList<>();
+    private final java.util.Map<Game.Entity,Attachment> objectScripts=new java.util.IdentityHashMap<>();
     private String nextScene;
     private boolean closed;
     public Runtime(Game source){this(source,name->{throw new IllegalArgumentException("Nenhum carregador de scripts configurado: "+name);},new Events(){});}
@@ -24,11 +25,11 @@ public final class Runtime implements AutoCloseable {
     }
     public static ScriptFactory reflection(ClassLoader loader){return name->(GameScript)Class.forName(name,true,loader).getDeclaredConstructor().newInstance();}
     private void attach(String name,Game.Entity e,Game.Hud h){if(name.isBlank())return;
-        try{var attachment=new Attachment(factory.create(name),new GameContext(this,e,h));scripts.add(attachment);attachment.script.onStart(attachment.context);}
+        try{var attachment=new Attachment(factory.create(name),new GameContext(this,e,h));scripts.add(attachment);if(e!=null)objectScripts.put(e,attachment);attachment.script.onStart(attachment.context);}
         catch(Exception error){throw new IllegalStateException("Falha no script "+name+": "+error.getMessage(),error);}}
     private void startScripts(){try{attach(scene.scriptClassName,null,null);for(var e:scene.objects)attach(e.scriptClassName,e,null);for(var h:scene.hud)attach(h.scriptClassName,null,h);}
         catch(RuntimeException error){destroyScripts();throw error;}}
-    private void destroyScripts(){for(int i=scripts.size()-1;i>=0;i--)try{scripts.get(i).script.onDestroy(scripts.get(i).context);}catch(Exception e){events.log("onDestroy: "+e.getMessage());}scripts.clear();}
+    private void destroyScripts(){for(int i=scripts.size()-1;i>=0;i--)try{scripts.get(i).script.onDestroy(scripts.get(i).context);}catch(Exception e){events.log("onDestroy: "+e.getMessage());}scripts.clear();objectScripts.clear();}
     void requestScene(String id){if(game.scenes.stream().noneMatch(s->s.id.equals(id)))throw new IllegalArgumentException("Cena inexistente: "+id);nextScene=id;}
     public void setAction(String action,boolean held){if(held){if(down.add(action))pressed.add(action);}else if(down.remove(action))released.add(action);}
     public double fadeAlpha(){return scene.camera.fadeSeconds<=0?0:Math.max(0,1-elapsed/scene.camera.fadeSeconds);}
@@ -47,9 +48,15 @@ public final class Runtime implements AutoCloseable {
             for (int i = 0; i < steps; i++) { move(e, dx/steps, 0); move(e, 0, dy/steps); }
         }
         for(var attachment:java.util.List.copyOf(scripts))attachment.script.onUpdate(dt,attachment.context);
+        var existing=java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<Game.Entity,Boolean>());existing.addAll(scene.objects);
+        for(var entry:java.util.List.copyOf(objectScripts.entrySet()))if(!existing.contains(entry.getKey())){
+            try{entry.getValue().script.onDestroy(entry.getValue().context);}catch(Exception error){events.log(error.getMessage());}
+            scripts.remove(entry.getValue());objectScripts.remove(entry.getKey());
+        }
+        for(var entity:java.util.List.copyOf(scene.objects))if(!entity.scriptClassName.isBlank()&&!objectScripts.containsKey(entity))attach(entity.scriptClassName,entity,null);
         for(var entity:scene.objects)entity.animationTime+=dt;
         updateCamera(dt);pressed.clear();released.clear();
-        if(nextScene!=null){String target=nextScene;nextScene=null;destroyScripts();int index=0;while(!baseline.scenes.get(index).id.equals(target))index++;scene=Codec.GSON.fromJson(Codec.GSON.toJson(baseline.scenes.get(index)),Game.Scene.class);game.scenes.set(index,scene);elapsed=0;paused=false;events.pauseAudio(false);down.clear();startScripts();updateCamera(0);}
+        if(nextScene!=null){String target=nextScene;nextScene=null;destroyScripts();int index=0;while(!baseline.scenes.get(index).id.equals(target))index++;scene=Codec.detached(baseline.scenes.get(index));game.scenes.set(index,scene);elapsed=0;paused=false;events.pauseAudio(false);down.clear();startScripts();updateCamera(0);}
     }
     private void updateCamera(double dt){
         var camera=scene.camera;
@@ -80,10 +87,21 @@ public final class Runtime implements AutoCloseable {
             var bounds=collisionBounds(scene,member).translate(dx,dy);
             for(var map:scene.tileMaps)for(var obstacle:map.obstacles){
                 double x=map.x+obstacle.x*map.unitScale,y=map.y+obstacle.y*map.unitScale;
-                if(overlaps(bounds.x(),bounds.y(),bounds.width(),bounds.height(),x,y,obstacle.width*map.unitScale,obstacle.height*map.unitScale))return true;
+                if(overlaps(bounds.x(),bounds.y(),bounds.width(),bounds.height(),x,y,obstacle.width*map.unitScale,obstacle.height*map.unitScale)&&CollisionGeometry.intersects(bounds,obstacle.colliderPolygon,x,y,map.unitScale))return true;
             }
-            for(var other:scene.objects)if(other.solid&&!other.trigger&&!Hierarchy.descendant(scene,other,e)&&!Hierarchy.descendant(scene,e,other)&&overlaps(bounds,collisionBounds(scene,other)))return true;
+            for(var other:scene.objects)if(other.solid&&!other.trigger&&!Hierarchy.descendant(scene,other,e)&&!Hierarchy.descendant(scene,e,other)&&overlaps(bounds,collisionBounds(scene,other))&&polygonContact(bounds,other))return true;
         }return false;
+    }
+    private boolean polygonContact(CollisionRect bounds,Game.Entity other){
+        if(other.colliderPolygon.isEmpty())return true;
+        var pose=Hierarchy.pose(scene,other);
+        var vertices=new java.util.ArrayList<Double>();double angle=Math.toRadians(pose.rotation()),cos=Math.cos(angle),sin=Math.sin(angle);
+        for(int i=0;i<other.colliderPolygon.size();i+=2){
+            double x=other.colliderPolygon.get(i)-other.width/2,y=other.colliderPolygon.get(i+1)-other.height/2;
+            if(other.flipX&&other.colliderFollowsFlip)x=-x;
+            vertices.add(pose.x()+other.width/2+x*cos+y*sin);vertices.add(pose.y()+other.height/2-x*sin+y*cos);
+        }
+        return CollisionGeometry.intersects(bounds,vertices,0,0,1);
     }
     public record CollisionRect(double x,double y,double width,double height){
         public CollisionRect translate(double dx,double dy){return new CollisionRect(x+dx,y+dy,width,height);}

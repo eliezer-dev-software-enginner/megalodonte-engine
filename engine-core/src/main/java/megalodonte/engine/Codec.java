@@ -40,6 +40,7 @@ public final class Codec {
             }
             for(var e:scene.objects){
                 if(e.animation==null||e.animations==null||e.properties==null||!Double.isFinite(e.animationTime)||e.animationTime<0||!Double.isFinite(e.colliderOffsetX)||!Double.isFinite(e.colliderOffsetY)||!Double.isFinite(e.colliderWidth)||!Double.isFinite(e.colliderHeight)||e.colliderWidth<0||e.colliderHeight<0)throw new IllegalArgumentException("Sprite/colisor inválido");
+                CollisionGeometry.validate(e.colliderPolygon);
                 for(var animation:e.animations.values()){if(animation==null||animation.frames==null||animation.frames.isEmpty()||!positive(animation.fps))throw new IllegalArgumentException("Animação inválida");for(var frame:animation.frames)validateAsset(frame);}
             }
             if(!Double.isFinite(scene.camera.viewportTop)||scene.camera.viewportTop<0||scene.camera.viewportTop>=720)throw new IllegalArgumentException("Margem superior da câmera inválida");
@@ -56,7 +57,7 @@ public final class Codec {
     private static void validateSceneFeatures(Game.Scene scene){
         var c=scene.camera;
         if(c==null || !Set.of("fixed","follow").contains(c.mode)|| c.targetId==null || !positive(c.width)||!positive(c.height)||!positive(c.zoom)||!Double.isFinite(c.x)||!Double.isFinite(c.y)||!Double.isFinite(c.followOffsetX)||!Double.isFinite(c.followOffsetY)||!Double.isFinite(c.followSpeed)||c.followSpeed<0||!Double.isFinite(c.fadeSeconds)||c.fadeSeconds<0||!Double.isFinite(c.deadZoneWidth)||c.deadZoneWidth<0||!Double.isFinite(c.deadZoneHeight)||c.deadZoneHeight<0)throw new IllegalArgumentException("Câmera inválida");
-        validateAsset(scene.musicAssetPath);script(scene.scriptClassName);
+        validateAsset(scene.backgroundAssetPath);if(!Double.isFinite(scene.backgroundParallaxX)||scene.backgroundParallaxX<0||scene.backgroundParallaxX>1)throw new IllegalArgumentException("Paralaxe inválida");validateAsset(scene.musicAssetPath);script(scene.scriptClassName);
         if(!Double.isFinite(scene.musicVolume)||scene.musicVolume<0||scene.musicVolume>1)throw new IllegalArgumentException("Volume deve estar entre 0 e 1");
         if(scene.tileMaps==null)throw new IllegalArgumentException("Mapas inválidos");
         Set<String> mapIds=new HashSet<>();
@@ -64,11 +65,22 @@ public final class Codec {
             if(map==null||map.id==null||map.id.isBlank()||!mapIds.add(map.id)||map.columns<=0||map.rows<=0||map.tileWidth<=0||map.tileHeight<=0||!positive(map.unitScale)||!Double.isFinite(map.x)||!Double.isFinite(map.y)||map.tiles==null||map.layers==null||map.obstacles==null)throw new IllegalArgumentException("Tilemap inválido");
             for(var entry:map.tiles.entrySet()){var tile=entry.getValue();if(entry.getKey()==null||entry.getKey()<=0||tile==null)throw new IllegalArgumentException("Tile inválido");validateAsset(tile.assetPath);if(tile.width<=0||tile.height<=0||tile.sourceX<0||tile.sourceY<0)throw new IllegalArgumentException("Tile inválido");}
             for(var layer:map.layers){if(layer==null||!Double.isFinite(layer.offsetX)||!Double.isFinite(layer.offsetY)||layer.data==null||layer.data.length!=(long)map.columns*map.rows||!Double.isFinite(layer.opacity)||layer.opacity<0||layer.opacity>1)throw new IllegalArgumentException("Camada inválida");for(long gid:layer.data)if(gid<0||gid>0xffffffffL||((gid&0x0fffffffL)!=0&&!map.tiles.containsKey((int)(gid&0x0fffffffL))))throw new IllegalArgumentException("GID inválido ou sem tileset: "+gid);}
-            for(var obstacle:map.obstacles)if(obstacle==null||!positive(obstacle.width)||!positive(obstacle.height)||!Double.isFinite(obstacle.x)||!Double.isFinite(obstacle.y))throw new IllegalArgumentException("Colisor do mapa inválido");
+            for(var obstacle:map.obstacles){if(obstacle==null||!positive(obstacle.width)||!positive(obstacle.height)||!Double.isFinite(obstacle.x)||!Double.isFinite(obstacle.y))throw new IllegalArgumentException("Colisor do mapa inválido");CollisionGeometry.validate(obstacle.colliderPolygon);}
         }
         for(var e:scene.objects){if(e==null)throw new IllegalArgumentException("Objeto inválido");script(e.scriptClassName);}
         if(scene.hud!=null)for(var h:scene.hud){if(h==null)throw new IllegalArgumentException("HUD inválida");script(h.scriptClassName);if(h.action==null)throw new IllegalArgumentException("Ação HUD inválida");}
     }
     private static boolean positive(double n) { return Double.isFinite(n) && n > 0; }
-    public static Game copy(Game game) { return read(GSON.toJson(game)); }
+    public static Game copy(Game game) { validate(game);return detached(game); }
+    /** Copy authored data without allocating a JSON string for every tile and animation. */
+    @SuppressWarnings("unchecked")
+    public static <T> T detached(T value) {
+        if(value==null||value instanceof String||value instanceof Number||value instanceof Boolean||value instanceof com.google.gson.JsonPrimitive)return value;
+        if(value instanceof long[] array)return (T)array.clone();
+        if(value instanceof List<?> list){var copy=new ArrayList<Object>(list.size());for(var item:list)copy.add(detached(item));return (T)copy;}
+        if(value instanceof Map<?,?> map){var copy=new LinkedHashMap<Object,Object>();for(var entry:map.entrySet())copy.put(entry.getKey(),detached(entry.getValue()));return (T)copy;}
+        Class<?> type=value.getClass();if(type!=Game.class&&type.getEnclosingClass()!=Game.class)throw new IllegalArgumentException("Tipo de documento desconhecido: "+type.getName());
+        try{Object copy=type.getDeclaredConstructor().newInstance();for(var field:type.getFields())if(!java.lang.reflect.Modifier.isStatic(field.getModifiers()))field.set(copy,detached(field.get(value)));return (T)copy;}
+        catch(ReflectiveOperationException error){throw new IllegalStateException("Falha ao copiar documento",error);}
+    }
 }

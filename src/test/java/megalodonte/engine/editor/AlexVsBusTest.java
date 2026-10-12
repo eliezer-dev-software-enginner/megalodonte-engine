@@ -69,6 +69,16 @@ class AlexVsBusTest {
         for(int i=0;i<120;i++)r.update(.05,0,0);
         assertEquals(origin,rope.x,.001,"Released rope must return to its initial position");
     }}
+    @Test void landingOnFourthLevelNarrowPlatformKeepsPlayerAboveGround(){
+        for(String id:new String[]{"normal-4","hard-4"})try(var r=start(id)){
+            var player=Hierarchy.find(r.scene,"alex");
+            for(double center:new double[]{120.05,120.5,121,121.5,121.95}){
+                player.x=center-player.colliderOffsetX-player.colliderWidth/2;player.y=10-player.colliderOffsetY;
+                for(int i=0;i<60;i++)r.update(.025,0,0);
+                assertEquals(7,megalodonte.engine.Runtime.collisionBounds(r.scene,player).y(),.001,"Landing must stop on solid ground: "+id+" at "+center);
+            }
+        }
+    }
     @Test void everyHoleEdgeSupportsPlayerAcrossItsSurface(){
         int checked=0;
         for(var level:game.scenes)if(level.camera.targetId.equals("alex"))try(var r=start(level.id)){

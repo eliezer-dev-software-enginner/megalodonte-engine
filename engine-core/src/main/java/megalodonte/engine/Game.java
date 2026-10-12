@@ -15,8 +15,10 @@ public final class Game {
         public double worldWidth = 16, worldHeight = 9;
         public Camera camera = new Camera();
         public String musicAssetPath = "", scriptClassName = "";
+        public String backgroundAssetPath = "";
+        public double backgroundParallaxX = .2;
         public double musicVolume = 0.7;
-        public boolean musicLoop = true;
+        public boolean musicLoop = true, depthSort = false;
         public List<TileMap> tileMaps = new ArrayList<>();
         public List<Entity> objects = new ArrayList<>();
         public List<Hud> hud = new ArrayList<>();
@@ -24,14 +26,17 @@ public final class Game {
     public static final class Entity {
         public String id = UUID.randomUUID().toString(), name = "Objeto", color = "#56b6c2", assetPath = "";
         public String parentId = "", scriptClassName = "";
+        public int drawLayer = 0;
         public double x = 2, y = 2, width = 1, height = 1, speed = 4, rotation = 0;
         public boolean solid = true, trigger = false, player = false, visible = true, flipX = false, colliderFollowsFlip = true;
         public double colliderOffsetX, colliderOffsetY, colliderWidth, colliderHeight;
+        /** Local polygon vertices as x,y pairs; empty uses the rectangular collider. */
+        public List<Double> colliderPolygon = new ArrayList<>();
         public Map<String, Animation> animations = new LinkedHashMap<>();
         public String animation = "";
         public double animationTime;
         public Map<String, String> properties = new LinkedHashMap<>();
-        public Entity copy() { return Codec.GSON.fromJson(Codec.GSON.toJson(this), Entity.class); }
+        public Entity copy() { return Codec.detached(this); }
     }
     public static final class Animation {
         public List<String> frames = new ArrayList<>();
@@ -43,6 +48,8 @@ public final class Game {
         public String id = UUID.randomUUID().toString(), type = "text", text = "Pontuação: 0";
         public String assetPath = "", color = "#ffffff", horizontalAnchor = "left", verticalAnchor = "top";
         public String referenceArea = "viewport";
+        public String buttonBackground = "#245878", fontFamily = "", textAlign = "left", textVerticalAlign = "top";
+        public double buttonOpacity = 1, cornerRadius = 8;
         public String scriptClassName = "", action = "";
         public boolean visible = true, focused = false;
         public double offsetX = 24, offsetY = 24, width = 300, height = 48, fontSize = 32;
@@ -50,7 +57,7 @@ public final class Game {
         public HudCondition condition = new HudCondition();
         public boolean booleanProperty(String name,boolean fallback){var value=properties.get(name);return value==null?fallback:value.getAsBoolean();}
         public void setBooleanProperty(String name,boolean value){properties.put(name,new com.google.gson.JsonPrimitive(value));}
-        public Hud copy() { return Codec.GSON.fromJson(Codec.GSON.toJson(this), Hud.class); }
+        public Hud copy() { return Codec.detached(this); }
     }
     /** Optional boolean property drives presentation independently of scripts. */
     public static final class HudCondition {
@@ -65,7 +72,7 @@ public final class Game {
         public double followSpeed = 6, deadZoneWidth = 0, deadZoneHeight = 0, fadeSeconds = 0;
         public double viewportTop = 0;
         public boolean clampToWorld = true;
-        public Camera copy() { return Codec.GSON.fromJson(Codec.GSON.toJson(this),Camera.class); }
+        public Camera copy() { return Codec.detached(this); }
     }
     public static final class TileMap {
         public String id = UUID.randomUUID().toString(), name = "Mapa";
