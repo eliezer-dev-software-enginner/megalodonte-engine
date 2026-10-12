@@ -9,7 +9,7 @@ import java.util.jar.*;
 public final class DesktopPackager {
     public static void main(String[] args)throws Exception{
         if(args.length!=1)throw new IllegalArgumentException("Informe a pasta do jogo");
-        Path project=Path.of(args[0]).toAbsolutePath().normalize();var game=Codec.read(Files.readString(project.resolve("game.json")));
+        Path project=Path.of(args[0]).toAbsolutePath().normalize();Game game;try(var reader=Files.newBufferedReader(project.resolve("game.json"))){game=Codec.read(reader);}
         Path output=project.resolve("build/desktop");Files.createDirectories(output);Path temporary=Files.createTempDirectory(output,"package-");
         String name=game.applicationId.substring(game.applicationId.lastIndexOf('.')+1);
         try{

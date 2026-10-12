@@ -133,3 +133,9 @@ O runtime expõe `GameContext.framesPerSecond()`, medido com o delta real do hos
 `GameContext.resolvePenetration(entity, maxDistance)` oferece recuperação explícita e limitada de uma posição inicial dentro de geometria, preservando a posição quando não há saída próxima. `blocked(entity, dx, dy)` permite sondar apoio/passagem sem alterar a posição do ator. A recuperação não é executada automaticamente em cada movimento.
 
 As exportações Android separam a campanha em um manifesto `game.json` e arquivos `scenes/*.json`. O host lê JSON por `Reader` e carrega apenas a cena ativa; ao mudar de fase, a cena anterior é liberada. O projeto original do editor permanece completo e suas edições são preservadas. Ao receber pressão de memória do Android, o cache de imagens é esvaziado. Reexporte projetos Android antigos para incorporar esse formato.
+
+### AppImage no Linux
+
+`bash scripts/build-desktop.sh /pasta/do/jogo` gera também `build/desktop/<nome>-<arquitetura>.AppImage`, contendo a JVM e o jogo, e o executa automaticamente ao concluir. O botão **Desktop / AppImage** usa esse mesmo fluxo. A ferramenta oficial [appimagetool](https://github.com/AppImage/appimagetool) é baixada uma vez para `build/tools`; a primeira geração precisa de internet e `curl`. Use `APPIMAGETOOL=/caminho/appimagetool` para fornecer a ferramenta.
+
+A abertura automática usa o modo de extração do AppImage para funcionar sem FUSE; o log fica em `build/desktop/appimage-run.log`. Para builds sem abrir o jogo e o explorador, defina `ENGINE_NO_OPEN=1`. Em máquinas sem sessão gráfica, o arquivo é gerado sem execução automática. O AppImage é gerado para a arquitetura da máquina Linux usada na build.

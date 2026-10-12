@@ -29,7 +29,7 @@ public final class DesktopGameApp extends Application {
         if(configured!=null)project=Path.of(configured).toAbsolutePath();
         else if(!getParameters().getRaw().isEmpty())project=Path.of(getParameters().getRaw().getFirst()).toAbsolutePath();
         else project=Path.of(DesktopLauncher.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getParent().resolve("game");
-        var game=Codec.read(Files.readString(project.resolve("game.json")));
+        Game game;try(var reader=Files.newBufferedReader(project.resolve("game.json"))){game=Codec.read(reader);}
         var playerState=new PlayerState(game.applicationId);
         runtime=new megalodonte.engine.Runtime(game,megalodonte.engine.Runtime.reflection(getClass().getClassLoader()),new megalodonte.engine.Runtime.Events(){
             public void playSound(String asset){audio.sound(project.resolve(asset));}

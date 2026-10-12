@@ -441,7 +441,7 @@
                   {
                     "type": "Button",
                     "props": {
-                      "text": "Exportar Desktop",
+                      "text": "Desktop / AppImage",
                       "height": 36
                     },
                     "events": {
