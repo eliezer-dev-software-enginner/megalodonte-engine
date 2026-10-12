@@ -79,7 +79,8 @@ def prepare(engine, game):
         shutil.copy2(engine / 'engine-core/build.gradle.kts', temporary / 'engine-core/build.gradle.kts')
         shutil.copytree(engine / 'engine-core/src/main', temporary / 'engine-core/src/main')
         (temporary / 'game').mkdir()
-        shutil.copy2(game / 'game.json', temporary / 'game/game.json')
+        import runpy
+        runpy.run_path(str(engine / 'scripts/pack-android-scenes.py'))['pack'](game / 'game.json', temporary / 'game')
         if (game / 'assets').is_dir():
             shutil.copytree(game / 'assets', temporary / 'game/assets')
         if (game / 'scripts').is_dir():

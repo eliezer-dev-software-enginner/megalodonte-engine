@@ -6,6 +6,11 @@ public final class Codec {
     public static Game read(String json) {
         Game game = GSON.fromJson(json, Game.class); validate(game); return game;
     }
+    /** Stream UTF-8 through a Reader without retaining a campaign-sized String/byte array. */
+    public static Game read(java.io.Reader reader){Game game=GSON.fromJson(reader,Game.class);validate(game);return game;}
+    public static Game.Scene readScene(java.io.Reader reader){
+        var scene=GSON.fromJson(reader,Game.Scene.class);var document=new Game();document.scenes.add(scene);document.entrySceneId=scene==null?"":scene.id;validate(document);return scene;
+    }
     public static void validate(Game game) {
         if (game == null || game.version != 1 || game.scenes == null || game.scenes.isEmpty()) throw new IllegalArgumentException("Documento de jogo inválido ou versão incompatível");
         if(game.applicationId==null||!game.applicationId.matches("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+"))throw new IllegalArgumentException("applicationId inválido");
@@ -47,6 +52,11 @@ public final class Codec {
             Hierarchy.validate(scene);
             if(!scene.camera.targetId.isEmpty() && scene.objects.stream().noneMatch(e->e.id.equals(scene.camera.targetId)))throw new IllegalArgumentException("Alvo de câmera inexistente");
             if (scene.background == null || !scene.background.matches("#[0-9a-fA-F]{6}")) throw new IllegalArgumentException("Fundo inválido");
+        }
+        if(game.sceneFiles==null)throw new IllegalArgumentException("Manifesto inválido");
+        if(!game.sceneFiles.isEmpty()){
+            if(!game.sceneFiles.keySet().equals(scenes))throw new IllegalArgumentException("Manifesto não cobre as cenas");
+            for(var path:game.sceneFiles.values()){validateAsset(path);if(path.isBlank()||!path.endsWith(".json"))throw new IllegalArgumentException("Arquivo de cena inválido");}
         }
         if (!scenes.contains(game.entrySceneId)) throw new IllegalArgumentException("Cena inicial inexistente");
     }

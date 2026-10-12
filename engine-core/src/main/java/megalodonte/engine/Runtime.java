@@ -3,6 +3,8 @@ package megalodonte.engine;
 public final class Runtime implements AutoCloseable {
     public final Game game;
     private final Game baseline;
+    public interface SceneLoader {Game.Scene load(String id) throws Exception;}
+    private final SceneLoader sceneLoader;
     public Game.Scene scene;
     public interface ScriptFactory { GameScript create(String className) throws Exception; }
     public interface Events { default void exportSave(String json,java.util.function.Consumer<String> done){done.accept("Exportação indisponível neste host.");} default void importSave(java.util.function.BiConsumer<String,String> done){done.accept(null,"Importação indisponível neste host.");} default void log(String message){} default void playSound(String assetPath){} default void playSound(String assetPath,double volume){playSound(assetPath);} default void pauseAudio(boolean paused){} default void muteAudio(boolean muted){} default void quit(){} default java.util.Map<String,String> loadState(){return java.util.Map.of();} default void saveState(java.util.Map<String,String> state){} }
@@ -26,15 +28,23 @@ public final class Runtime implements AutoCloseable {
     /** Call after editing an existing map obstacle from a running script; transforms/count changes are automatic. */
     public void invalidateCollisionGeometry(){obstacles.invalidate();hasParents=scene.objects.stream().anyMatch(e->!e.parentId.isEmpty());}
     public Runtime(Game source){this(source,name->{throw new IllegalArgumentException("Nenhum carregador de scripts configurado: "+name);},new Events(){});}
-    public Runtime(Game source,ScriptFactory factory,Events events){
+    public Runtime(Game source,ScriptFactory factory,Events events){this(source,factory,events,null);}
+    public Runtime(Game source,ScriptFactory factory,Events events,SceneLoader loader){
+        if(!source.sceneFiles.isEmpty()&&loader==null)throw new IllegalArgumentException("Manifesto requer carregador de cenas");
+        sceneLoader=loader;
         baseline=Codec.copy(source);game=new Game();
         // Retain one campaign snapshot; detach only the active scene instead of duplicating every level.
         try{for(var field:Game.class.getFields())if(!field.getName().equals("scenes"))field.set(game,Codec.detached(field.get(baseline)));}
         catch(IllegalAccessException error){throw new IllegalStateException(error);}
         game.scenes=new java.util.ArrayList<>(baseline.scenes);this.factory=factory;this.events=events;
         scene=game.scenes.stream().filter(s->s.id.equals(game.entrySceneId)).findFirst().orElseThrow();
-        int initial=game.scenes.indexOf(scene);scene=Codec.detached(scene);game.scenes.set(initial,scene);
+        int initial=game.scenes.indexOf(scene);scene=loadScene(scene);game.scenes.set(initial,scene);
         state.putAll(events.loadState());startScripts();updateCamera(0);
+    }
+    private Game.Scene loadScene(Game.Scene descriptor){
+        if(sceneLoader==null)return Codec.detached(descriptor);
+        try{var loaded=sceneLoader.load(descriptor.id);if(loaded==null||!descriptor.id.equals(loaded.id))throw new IllegalArgumentException("Cena carregada não corresponde ao manifesto");return loaded;}
+        catch(Exception error){throw new IllegalStateException("Falha ao carregar cena "+descriptor.id,error);}
     }
     public static ScriptFactory reflection(ClassLoader loader){return name->(GameScript)Class.forName(name,true,loader).getDeclaredConstructor().newInstance();}
     private void attach(String name,Game.Entity e,Game.Hud h){if(name.isBlank())return;
@@ -74,7 +84,7 @@ public final class Runtime implements AutoCloseable {
         updateCamera(dt);pressed.clear();released.clear();
         if(nextScene!=null){String target=nextScene;nextScene=null;destroyScripts();
             for(int previous=0;previous<game.scenes.size();previous++)if(game.scenes.get(previous)==scene){game.scenes.set(previous,baseline.scenes.get(previous));break;}
-            int index=0;while(!baseline.scenes.get(index).id.equals(target))index++;scene=Codec.detached(baseline.scenes.get(index));game.scenes.set(index,scene);elapsed=0;paused=false;events.pauseAudio(false);down.clear();startScripts();updating=false;updateCamera(0);}
+            int index=0;while(!baseline.scenes.get(index).id.equals(target))index++;scene=loadScene(baseline.scenes.get(index));game.scenes.set(index,scene);elapsed=0;paused=false;events.pauseAudio(false);down.clear();startScripts();updating=false;updateCamera(0);}
         }finally{updating=false;}
     }
     private void updateCamera(double dt){

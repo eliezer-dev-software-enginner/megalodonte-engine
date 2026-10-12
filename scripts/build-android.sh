@@ -6,7 +6,7 @@ game_dir="$(cd "$1" && pwd)"
 staging_dir="$(mktemp -d)"
 trap 'rm -rf "$staging_dir"' EXIT
 mkdir -p "$staging_dir/game"
-cp "$game_dir/game.json" "$staging_dir/game/game.json"
+python3 "$engine_dir/scripts/pack-android-scenes.py" "$game_dir/game.json" "$staging_dir/game"
 if [[ -d "$game_dir/assets" ]]; then cp -R "$game_dir/assets" "$staging_dir/game/assets"; fi
 if [[ -d "$game_dir/scripts" ]]; then cp -R "$game_dir/scripts" "$staging_dir/scripts"; fi
 export JAVA_HOME="${ANDROID_JAVA_HOME:-/opt/android-studio-for-platform/jbr}"

@@ -116,7 +116,7 @@ O campo `Entity.colliderPolygon` contém pares X,Y locais; vazio mantém o retâ
 
 Objetos adicionados a `context.scene().objects` com `scriptClassName` recebem `onStart` ao fim do frame de criação e `onUpdate` a partir do próximo. Removê-los encerra a anexação com `onDestroy`; sair da cena também encerra todos os scripts. Isso permite modelos editáveis de tiros, bombas e outros objetos temporários.
 
-Documentos são copiados diretamente, sem criar strings JSON intermediárias de todos os tiles. No Android, bitmaps são carregados sob demanda e o cache mantém até 64 MiB, com uma exceção para uma única imagem maior. Textos HUD aceitam quebras de linha nos três hosts. Gamepads expõem também `pad_x`, `pad_y`, `pad_l1` e `pad_r1`.
+Documentos são copiados diretamente, sem criar strings JSON intermediárias de todos os tiles. No Android, bitmaps são carregados sob demanda e o cache mantém até 24 MiB (ou 1/8 do heap, se menor), com uma exceção para uma única imagem maior. Textos HUD aceitam quebras de linha nos três hosts. Gamepads expõem também `pad_x`, `pad_y`, `pad_l1` e `pad_r1`.
 
 A aparência dos botões HUD também é declarativa: fundo, opacidade, raio dos cantos, família da fonte e alinhamento horizontal/vertical são editáveis em **HUD → Visibilidade / tipo / imagem → Opções**. A área `content` mantém a composição centralizada de menus e histórias em telas largas; controles de jogo podem usar `viewport` para alcançar as bordas seguras.
 
@@ -131,3 +131,5 @@ Objetos têm `opacity` (0 a 1), disponível em **Objeto • colisor e propriedad
 O runtime expõe `GameContext.framesPerSecond()`, medido com o delta real do host antes do clamp da física e da pausa. Scripts podem usar `setSoundVolume(0..1)` para controlar o ganho dos efeitos sem alterar a música. Os hosts Desktop/editor e Android aplicam esse ganho; implementações antigas de `Events.playSound(String)` continuam compatíveis.
 
 `GameContext.resolvePenetration(entity, maxDistance)` oferece recuperação explícita e limitada de uma posição inicial dentro de geometria, preservando a posição quando não há saída próxima. `blocked(entity, dx, dy)` permite sondar apoio/passagem sem alterar a posição do ator. A recuperação não é executada automaticamente em cada movimento.
+
+As exportações Android separam a campanha em um manifesto `game.json` e arquivos `scenes/*.json`. O host lê JSON por `Reader` e carrega apenas a cena ativa; ao mudar de fase, a cena anterior é liberada. O projeto original do editor permanece completo e suas edições são preservadas. Ao receber pressão de memória do Android, o cache de imagens é esvaziado. Reexporte projetos Android antigos para incorporar esse formato.

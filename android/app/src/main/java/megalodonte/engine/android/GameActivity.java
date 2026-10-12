@@ -35,8 +35,8 @@ public final class GameActivity extends Activity {
     }
     private GameView view;
     @Override public void onCreate(Bundle state){super.onCreate(state);try{
-        String json;try(var stream=getAssets().open("game.json")){json=new String(stream.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);}
-        view=new GameView(Codec.read(json));setSafeContent(view);controllerManager=(android.hardware.input.InputManager)getSystemService(INPUT_SERVICE);controllerManager.registerInputDeviceListener(controllerListener,null);
+        Game game;try(var reader=new java.io.InputStreamReader(getAssets().open("game.json"),java.nio.charset.StandardCharsets.UTF_8)){game=Codec.read(reader);}
+        view=new GameView(game);setSafeContent(view);controllerManager=(android.hardware.input.InputManager)getSystemService(INPUT_SERVICE);controllerManager.registerInputDeviceListener(controllerListener,null);
     }catch(Exception e){android.widget.TextView error=new android.widget.TextView(this);error.setText("Falha ao carregar jogo: "+e.getMessage());setSafeContent(error);}}
     private void setSafeContent(View content){
         var host=new android.widget.FrameLayout(this);host.setBackgroundColor(Color.BLACK);
@@ -63,12 +63,14 @@ public final class GameActivity extends Activity {
     }
     @Override protected void onPause(){super.onPause();clearGamepad();if(view!=null){view.active=false;view.clearInput();view.effects.autoPause();view.pendingSounds.clear();if(view.music!=null&&view.musicReady)view.music.pause();}}
     @Override protected void onResume(){super.onResume();if(view!=null){view.active=true;view.last=0;if(!view.audioPaused)view.effects.autoResume();if(view.music!=null&&view.musicReady&&!view.runtime.paused)view.music.start();view.postInvalidateOnAnimation();}}
+    @Override public void onTrimMemory(int level){super.onTrimMemory(level);if(view!=null){view.images.clear();view.imageBytes=0;}}
     @Override protected void onDestroy(){if(controllerManager!=null)controllerManager.unregisterInputDeviceListener(controllerListener);if(view!=null)view.close();super.onDestroy();}
     private final class GameView extends View {
         final megalodonte.engine.Runtime runtime;
         final Paint paint=new Paint();
         final Map<String,Bitmap> images=new java.util.LinkedHashMap<>(32,.75f,true);
         long imageBytes;
+        final long imageBudget=Math.min(24L*1024*1024,java.lang.Runtime.getRuntime().maxMemory()/8);
         final Map<Integer,String> touchActions=new HashMap<>();
         final Set<String> held=new HashSet<>();
         final android.media.SoundPool effects=new android.media.SoundPool.Builder().setMaxStreams(12)
@@ -99,6 +101,9 @@ public final class GameActivity extends Activity {
                 public void quit(){GameActivity.this.finish();}
                 public void muteAudio(boolean value){muted=value;if(music!=null){float v=value?0:(float)runtime.scene.musicVolume;music.setVolume(v,v);}if(value){for(int stream:streams)effects.stop(stream);streams.clear();pendingSounds.clear();}}
                 public void pauseAudio(boolean value){audioPaused=value;if(music!=null&&musicReady){if(value)music.pause();else if(active)music.start();}if(value){effects.autoPause();pendingSounds.clear();}else if(active)effects.autoResume();}
+            },game.sceneFiles.isEmpty()?null:id->{
+                String path=game.sceneFiles.get(id);if(path==null)throw new IllegalArgumentException("Cena ausente");
+                try(var reader=new java.io.InputStreamReader(getAssets().open(path),java.nio.charset.StandardCharsets.UTF_8)){return Codec.readScene(reader);}
             });
         }
         void loadImage(String path){
@@ -109,7 +114,7 @@ public final class GameActivity extends Activity {
                 post(()->{loadingImages.remove(path);if(disposed){if(bitmap!=null)bitmap.recycle();return;}
                     if(bitmap==null){failedImages.add(path);return;}
                     images.put(path,bitmap);imageBytes+=bitmap.getAllocationByteCount();
-                    while(imageBytes>64L*1024*1024&&images.size()>1){var iterator=images.entrySet().iterator();var entry=iterator.next();imageBytes-=entry.getValue().getAllocationByteCount();iterator.remove();}
+                    while(imageBytes>imageBudget&&images.size()>1){var iterator=images.entrySet().iterator();var entry=iterator.next();imageBytes-=entry.getValue().getAllocationByteCount();iterator.remove();}
                     // Do not recycle an evicted bitmap that the hardware renderer may still reference.
                     if(active)postInvalidateOnAnimation();
                 });

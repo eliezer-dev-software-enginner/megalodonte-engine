@@ -10,6 +10,8 @@ public final class Game {
     public String iconAssetPath = "";
     public String applicationId = "megalodonte.engine.game";
     public List<Scene> scenes = new ArrayList<>();
+    /** Distribution-only scene manifest; authored projects retain their full scenes. */
+    public Map<String,String> sceneFiles = new LinkedHashMap<>();
     public static final class Scene {
         public String id = "scene-1", name = "Cena 1", background = "#172638";
         public double worldWidth = 16, worldHeight = 9;
