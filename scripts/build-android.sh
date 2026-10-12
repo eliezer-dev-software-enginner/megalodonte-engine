@@ -28,7 +28,18 @@ print(game.get("versionCode",1))
 print(game.get("versionName","0.1.0"))
 META
 )
-bash "$engine_dir/android/gradlew" -p "$engine_dir/android" :app:assembleDebug -PgameAssets="$staging_dir/game" -PgameScripts="$staging_dir/scripts" -PgameApplicationId="${metadata[0]}" -PgameName="${metadata[1]}" -PgameIcon="${metadata[2]}" -PgameVersionCode="${metadata[3]}" -PgameVersionName="${metadata[4]}"
+bash "$engine_dir/android/gradlew" -p "$engine_dir/android" :app:clean :app:assembleDebug -PgameAssets="$staging_dir/game" -PgameScripts="$staging_dir/scripts" -PgameApplicationId="${metadata[0]}" -PgameName="${metadata[1]}" -PgameIcon="${metadata[2]}" -PgameVersionCode="${metadata[3]}" -PgameVersionName="${metadata[4]}"
+# Asset roots change with each staging directory; rebuild app outputs to avoid stale AGP merges.
+python3 - "$staging_dir/game" "$engine_dir/android/app/build/outputs/apk/debug/app-debug.apk" <<'VERIFY'
+from pathlib import Path
+import sys,zipfile
+root=Path(sys.argv[1])
+with zipfile.ZipFile(sys.argv[2]) as apk:
+    for path in root.rglob('*.json'):
+        if apk.read('assets/'+path.relative_to(root).as_posix())!=path.read_bytes():
+            raise SystemExit('APK contains stale game data: '+str(path.relative_to(root)))
+print('APK game JSON verified against build snapshot')
+VERIFY
 mkdir -p "$game_dir/build/android"
 cp "$engine_dir/android/app/build/outputs/apk/debug/app-debug.apk" "$game_dir/build/android/game-debug.apk.tmp"
 mv "$game_dir/build/android/game-debug.apk.tmp" "$game_dir/build/android/game-debug.apk"
