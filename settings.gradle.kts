@@ -1,3 +1,3 @@
 rootProject.name = "megalodonte-engine"
 include(":engine-core")
-includeBuild("../megalodonte-script-app")
+includeBuild("../../framework/megalodonte-declarative/megalodonte-script-app")
