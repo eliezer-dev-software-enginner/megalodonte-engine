@@ -1,21 +1,32 @@
 # Megalodonte Engine 2D
 
-Editor JavaFX com UI orientada a dados (JSONC), baseado no código do `megalodonte-cliente`, sem copiar `.git`. Login/cadastro e seus testes permanecem como referência; a tela inicial agora é o editor.
+Editor JavaFX com UI orientada a dados (JSONC). O repositório também mantém código e testes de login/cadastro do projeto de origem como referência; a tela inicial da aplicação é o editor.
 
 Crie jogos com cenas, objetos e hierarquia, sprites, tilemaps Tiled, colisões AABB, câmera fixa ou seguindo um objeto, música, HUD e scripts Java. Play usa uma cópia do documento e preserva a edição. Desktop e Android executam o mesmo núcleo; a renderização usa Canvas JavaFX e Canvas Android. A importação aproveita o formato dos projetos libGDX, sem depender de libGDX no runtime.
+
+## Requisitos e início rápido
+
+O editor requer JDK 25 com compilador e acesso ao Maven Central para resolver as dependências. O build Gradle inclui `../../framework/megalodonte-declarative/megalodonte-script-app`; mantenha esse projeto nesse caminho relativo ao repositório. Esta estrutura é necessária mesmo para executar o editor ou seus testes. Os comandos abaixo usam Bash; os fluxos descritos de exportação e execução foram documentados para Linux.
 
 ```bash
 bash gradlew run
 bash gradlew test :engine-core:test
-# Depois de salvar um jogo em uma pasta:
-bash scripts/build-android.sh /caminho/meu-jogo
+bash gradlew createExample -PexampleDir=./meu-exemplo
 ```
 
-APK: `android/app/build/outputs/apk/debug/app-debug.apk`. `adb install -r` instala no dispositivo. O build Android exige SDK 35 e JDK 21 com compilador; configure `ANDROID_HOME` e `ANDROID_JAVA_HOME` se necessário. Alvo/mínimo API 35, seguindo megalodonte-android. Para compilar a demonstração: `JAVA_HOME=/opt/android-studio-for-platform/jbr ANDROID_HOME=$HOME/Android/Sdk bash android/gradlew -p android :app:assembleDebug`.
+O último comando cria um exemplo na pasta indicada; abra `meu-exemplo/game.json` pelo editor. Escolha uma pasta que ainda não contenha `game.json`.
 
-O botão Exportar Android salva o projeto e executa o build em segundo plano. O log fica em `build/android-build.log` na pasta do jogo e o APK em `build/android/game-debug.apk`. O script também permite compilar pelo terminal. O padrão local usa o JDK do Android Studio em `/opt/android-studio-for-platform/jbr`; configure `ANDROID_JAVA_HOME` em outras máquinas. É um APK debug instalável; assinatura de release e AAB ainda não estão implementadas.
+Para gerar um APK de um jogo salvo, instale o Android SDK com a plataforma 35 e configure `ANDROID_HOME` e `ANDROID_JAVA_HOME` com os caminhos do SDK e de um JDK 21 com compilador:
 
-O editor exige JDK 25. Dependências Megalodonte são resolvidas por composite builds locais. `game.json` e `assets/` ficam na pasta do jogo. Sprites são copiados, nunca referenciados por caminhos absolutos. Salve após editar. Ao abrir um documento incompatível, o editor apresenta o erro e preserva o projeto atual.
+```bash
+ANDROID_HOME=/caminho/para/android-sdk ANDROID_JAVA_HOME=/caminho/para/jdk-21 bash scripts/build-android.sh /caminho/para/jogo
+```
+
+O APK do comando acima fica em `<pasta-do-jogo>/build/android/game-debug.apk`; o build Gradle também produz `android/app/build/outputs/apk/debug/app-debug.apk`. Com `adb` instalado, use `adb install -r <caminho-do-apk>` para instalar no dispositivo. O alvo e o mínimo do aplicativo são API 35. Para compilar a demonstração incluída em `android/app/src/main/assets/game.json`, use `JAVA_HOME=/caminho/para/jdk-21 ANDROID_HOME=/caminho/para/android-sdk bash android/gradlew -p android :app:assembleDebug`.
+
+O botão Exportar Android salva o projeto e executa o build em segundo plano. O log fica em `build/android-build.log` na pasta do jogo e o APK em `build/android/game-debug.apk`. O script também permite compilar pelo terminal. Sem `ANDROID_JAVA_HOME`, o script procura o JDK em `/opt/android-studio-for-platform/jbr`; configure a variável se ele estiver em outro local. Essa exportação gera um APK debug instalável. Para assinar um APK ou gerar AAB, use o fluxo **Projeto Android** descrito abaixo.
+
+`game.json` e `assets/` ficam na pasta do jogo. Sprites são copiados, nunca referenciados por caminhos absolutos. Salve após editar. Ao abrir um documento incompatível, o editor apresenta o erro e preserva o projeto atual.
 
 - [Arquitetura e referência Nojo](docs/ARCHITECTURE.md)
 - [Estado e próximos passos](docs/STATUS.md)
@@ -66,7 +77,7 @@ Os scripts usam Java 17 e a API engine-core, sem classes JavaFX/libGDX/Android. 
 
 ## Alex vs Bus
 
-O projeto `../../games/alex-vs-bus/game.json` é a adaptação das 13 fases de Alex vs Bus para a engine. Seus scripts implementam plataformas, moedas, molas, cordas, checkpoints, perigos, pausa, cronômetro, cenas de chegada e final. Abra o documento na engine e clique Play. O projeto inclui assets originais, revisão da referência, créditos/licenças e ferramentas de geração/build.
+Se o repositório irmão `../../games/alex-vs-bus` estiver disponível, abra `../../games/alex-vs-bus/game.json` na engine e clique Play. Ele contém a adaptação das 13 fases de Alex vs Bus, com scripts para plataformas, moedas, molas, cordas, checkpoints, perigos, pausa, cronômetro, cenas de chegada e final. Esse jogo não está distribuído neste repositório; seus assets, créditos/licenças e ferramentas de geração/build ficam no projeto próprio.
 
 Exportar Desktop cria o jogador independente com Java/JavaFX; Exportar Android usa o applicationId/nome do jogo. Após cada build bem-sucedida, a pasta da saída abre no explorador. Sprites aceitam animações por frames, espelhamento e visibilidade, e os scripts podem usar caixas de colisão menores que a imagem.
 
@@ -126,7 +137,7 @@ O runtime usa um índice espacial para colisões dos mapas, faz culling antes de
 
 Se um script editar a geometria de um obstáculo existente no mapa durante o jogo, chame `c.invalidateCollisionGeometry()` após a edição. Alterar posição/escala do mapa ou adicionar/remover obstáculos é detectado automaticamente. Colisores de entidades móveis continuam consultados com seus valores atuais. `Runtime.collisionCandidates()` permite acompanhar quantos candidatos de mapa foram examinados.
 
-Objetos têm `opacity` (0 a 1), disponível em **Objeto • colisor e propriedades**, permitindo fades sem ocultar a figura de uma vez. O diagnóstico e as medições da campanha Final Roz estão em `games/final-roz-game-megalodonte/docs/PERFORMANCE.md`, relativo ao diretório `megalodonte-world`.
+Objetos têm `opacity` (0 a 1), disponível em **Objeto • colisor e propriedades**, permitindo fades sem ocultar a figura de uma vez. Se o repositório irmão Final Roz estiver disponível, o diagnóstico e as medições da campanha estão em `../../games/final-roz-game-megalodonte/docs/PERFORMANCE.md`.
 
 O runtime expõe `GameContext.framesPerSecond()`, medido com o delta real do host antes do clamp da física e da pausa. Scripts podem usar `setSoundVolume(0..1)` para controlar o ganho dos efeitos sem alterar a música. Os hosts Desktop/editor e Android aplicam esse ganho; implementações antigas de `Events.playSound(String)` continuam compatíveis.
 
@@ -141,3 +152,7 @@ As exportações Android separam a campanha em um manifesto `game.json` e arquiv
 A abertura automática usa o modo de extração do AppImage para funcionar sem FUSE; o log fica em `build/desktop/appimage-run.log`. Para builds sem abrir o jogo e o explorador, defina `ENGINE_NO_OPEN=1`. Em máquinas sem sessão gráfica, o arquivo é gerado sem execução automática. O AppImage é gerado para a arquitetura da máquina Linux usada na build.
 
 Nos hosts Desktop e Android, sprites animados mantêm o último quadro decodificado enquanto o próximo carrega. O cache desses quadros conserva apenas objetos da lista visível e descarta referências quando eles saem da tela ou a cena muda. Um sprite pendente não é substituído por um retângulo colorido.
+
+## Licença
+
+Este repositório não contém um arquivo de licença. As condições de uso e redistribuição precisam ser definidas pelos responsáveis pelo projeto.
