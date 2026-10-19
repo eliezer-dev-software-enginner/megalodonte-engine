@@ -16,7 +16,7 @@ bash gradlew createExample -PexampleDir=./meu-exemplo
 
 O último comando cria um exemplo na pasta indicada; abra `meu-exemplo/game.json` pelo editor. Escolha uma pasta que ainda não contenha `game.json`.
 
-Para gerar um APK de um jogo salvo, instale o Android SDK com a plataforma 35 e configure `ANDROID_HOME` e `ANDROID_JAVA_HOME` com os caminhos do SDK e de um JDK 21 com compilador:
+Para gerar um APK de um jogo salvo, instale Python 3 e o Android SDK com a plataforma 35. Configure `ANDROID_HOME` e `ANDROID_JAVA_HOME` com os caminhos do SDK e de um JDK 21 com compilador:
 
 ```bash
 ANDROID_HOME=/caminho/para/android-sdk ANDROID_JAVA_HOME=/caminho/para/jdk-21 bash scripts/build-android.sh /caminho/para/jogo
@@ -147,7 +147,7 @@ As exportações Android separam a campanha em um manifesto `game.json` e arquiv
 
 ### AppImage no Linux
 
-`bash scripts/build-desktop.sh /pasta/do/jogo` gera também `build/desktop/<nome>-<arquitetura>.AppImage`, contendo a JVM e o jogo, e o executa automaticamente ao concluir. O botão **Desktop / AppImage** usa esse mesmo fluxo. A ferramenta oficial [appimagetool](https://github.com/AppImage/appimagetool) é baixada uma vez para `build/tools`; a primeira geração precisa de internet e `curl`. Use `APPIMAGETOOL=/caminho/appimagetool` para fornecer a ferramenta.
+Com Python 3 instalado, `bash scripts/build-desktop.sh /pasta/do/jogo` gera também `build/desktop/<nome>-<arquitetura>.AppImage`, contendo a JVM e o jogo, e o executa automaticamente ao concluir. O botão **Desktop / AppImage** usa esse mesmo fluxo. A ferramenta oficial [appimagetool](https://github.com/AppImage/appimagetool) é baixada uma vez para `build/tools`; a primeira geração precisa de internet e `curl`. Use `APPIMAGETOOL=/caminho/appimagetool` para fornecer a ferramenta.
 
 A abertura automática usa o modo de extração do AppImage para funcionar sem FUSE; o log fica em `build/desktop/appimage-run.log`. Para builds sem abrir o jogo e o explorador, defina `ENGINE_NO_OPEN=1`. Em máquinas sem sessão gráfica, o arquivo é gerado sem execução automática. O AppImage é gerado para a arquitetura da máquina Linux usada na build.
 
