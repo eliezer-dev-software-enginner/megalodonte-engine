@@ -38,6 +38,10 @@ class ReleaseExportTest(unittest.TestCase):
             self.assertFalse((project / 'local.properties').exists())
             self.assertFalse((project / 'app/build').exists())
             (project / 'my-keystore.jks').write_text('local user file')
+            (project / 'app/build/intermediates').mkdir(parents=True)
+            (project / 'app/build/intermediates/cache.bin').write_bytes(b'cache')
+            (project / '.gradle').mkdir()
+            (project / '.gradle/cache.bin').write_bytes(b'cache')
             (game / "scripts/Test.java").write_text("// updated script")
             metadata["versionCode"] = 8
             (game / "game.json").write_text(json.dumps(metadata))
@@ -48,6 +52,8 @@ class ReleaseExportTest(unittest.TestCase):
             backups = list(project.parent.glob('project-backup-*'))
             self.assertEqual(1, len(backups))
             self.assertEqual('local user file', (backups[0] / 'my-keystore.jks').read_text())
+            self.assertFalse((backups[0] / 'app/build').exists())
+            self.assertFalse((backups[0] / '.gradle').exists())
             self.assertFalse((project / 'my-keystore.jks').exists())
 
     def test_detected_sdk_is_configured_without_copying_user_properties(self):
@@ -55,7 +61,8 @@ class ReleaseExportTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             game = Path(folder) / 'game'; game.mkdir()
             sdk = Path(folder) / 'Android SDK'; (sdk / 'platforms').mkdir(parents=True)
-            (game / 'game.json').write_text(json.dumps(dict(applicationId='game.test.release')))
+            (game / 'game.json').write_text(json.dumps(dict(applicationId='game.test.release',
+                entrySceneId='scene-1', scenes=[dict(id='scene-1')])))
             with patch.object(release, 'find_sdk', return_value=sdk):
                 project = release.prepare(engine, game)
             self.assertEqual('sdk.dir=' + release.property_value(sdk) + '\n', (project / 'local.properties').read_text())

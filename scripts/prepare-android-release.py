@@ -131,14 +131,20 @@ Esta pasta é uma cópia: compilar diretamente nela não sincroniza mudanças do
 Para atualizar esta exportação, use Projeto Android no editor ou
 bash tools/build.sh android-release na pasta original do jogo.
 Uma exportação existente é preservada em project-backup-<data>-<id>, incluindo
-suas alterações locais; alterações feitas aqui não retornam ao editor.
+suas alterações locais. Saídas e caches do Gradle são descartados do backup;
+eles podem ser recriados. Alterações feitas aqui não retornam ao editor.
 ''')
         target = output / 'project'
+        backup = None
         if target.exists():
             backup = output / ('project-backup-' + datetime.now().strftime('%Y%m%d-%H%M%S') + '-' + uuid.uuid4().hex[:8])
             target.rename(backup)
             print('Exportação anterior preservada em:', backup)
         temporary.rename(target)
+        if backup is not None:
+            for generated in (backup / '.gradle', backup / 'app/build', backup / 'engine-core/build'):
+                if generated.is_dir():
+                    shutil.rmtree(generated)
         print(target)
         return target
     finally:
