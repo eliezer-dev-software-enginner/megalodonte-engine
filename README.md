@@ -6,7 +6,7 @@ Crie jogos com cenas, objetos e hierarquia, sprites, tilemaps Tiled, colisões A
 
 ## Requisitos e início rápido
 
-O editor requer JDK 25 com compilador e acesso ao Maven Central para resolver as dependências. O build Gradle inclui `../../framework/megalodonte-declarative/megalodonte-script-app`; mantenha esse projeto nesse caminho relativo ao repositório. Esta estrutura é necessária mesmo para executar o editor ou seus testes. Os comandos abaixo usam Bash; os fluxos descritos de exportação e execução foram documentados para Linux.
+O editor requer JDK 25 com compilador e acesso ao Maven Central para resolver as dependências. O build Gradle inclui `../../framework/megalodonte-declarative/megalodonte-script-app`; mantenha esse projeto nesse caminho relativo ao repositório. Esse projeto irmão não é distribuído aqui e é necessário mesmo para executar o editor ou seus testes. Além disso, os testes do editor dependem de `megalodonte:megalodonte-theme:1.0.0-beta`, declarado em `build.gradle.kts` e procurado também em `mavenLocal()`; confirme que esse artefato está disponível antes de executar `bash gradlew test`. Os comandos abaixo usam Bash; os fluxos descritos de exportação e execução foram documentados para Linux.
 
 ```bash
 bash gradlew run
