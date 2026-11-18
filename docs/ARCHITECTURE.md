@@ -6,7 +6,7 @@ A referência nojo-engine separa layout do editor, documento do jogo, projetos e
 
 `engine-core` é Java 17 + Gson, sem JavaFX, Android ou libGDX. Define documento versionado, validação, cópia de Play e atualização/colisão. Coordenadas em unidades de mundo, origem inferior esquerda, visualização com proporção preservada. Movimento por eixos e subpassos, delta limitado a 50ms. Colisão AABB é uma base simples, sem simulação física.
 
-`android` tem build separado para evitar dependências desktop e JDK 25 no APK. Segue SDK/minSdk 35 e AGP 9.0.1 do backend megalodonte-android. A superfície do jogo usa Canvas Android, pois não é uma árvore de widgets de UI. O mesmo engine-core é compilado nos dois destinos. Não é necessário modificar android-bridge para desenhar o jogo.
+`android` tem build separado para evitar dependências desktop e JDK 25 no APK. Segue SDK/minSdk 35, AGP 8.12.0 e Gradle 8.13 do backend megalodonte-android. A superfície do jogo usa Canvas Android, pois não é uma árvore de widgets de UI. O mesmo engine-core é compilado nos dois destinos. Não é necessário modificar android-bridge para desenhar o jogo.
 
 `game.json` versão 1 é um contrato novo; não é importação automática de `game-data.json` do Nojo. O formato é exemplificado em android/app/src/main/assets/game.json. A API de scripts libGDX e skins não é transportada.
 
