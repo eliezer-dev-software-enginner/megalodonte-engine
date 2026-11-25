@@ -1,5 +1,8 @@
 # Megalodonte Engine 2D
 
+> [!WARNING]
+> **Depreciação:** este projeto usa `megalodonte-jsonc-ui` via `megalodonte-script-app`; o renderizador está congelado e não recebe correções. Migre para o **modo native** (`megalodonte <app> --mode native`), compondo as telas com componentes Megalodonte em Java.
+
 Editor JavaFX com UI orientada a dados (JSONC). O repositório também mantém código e testes de login/cadastro do projeto de origem como referência; a tela inicial da aplicação é o editor.
 
 Crie jogos com cenas, objetos e hierarquia, sprites, tilemaps Tiled, colisões AABB, câmera fixa ou seguindo um objeto, música, HUD e scripts Java. Play usa uma cópia do documento e preserva a edição. Desktop e Android executam o mesmo núcleo; a renderização usa Canvas JavaFX e Canvas Android. A importação aproveita o formato dos projetos libGDX, sem depender de libGDX no runtime.

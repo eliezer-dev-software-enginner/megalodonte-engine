@@ -10,6 +10,7 @@ javafx { version = "25.0.1"; modules("javafx.controls", "javafx.graphics", "java
 dependencies {
     implementation(project(":engine-core"))
     implementation("net.java.dev.jna:jna:5.6.0")
+    // DEPRECATED: this launcher pulls in frozen megalodonte-jsonc-ui; migrate to native mode.
     implementation("megalodonte:megalodonte-script-app:0.1.0")
     testImplementation("megalodonte:megalodonte-theme:1.0.0-beta")
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
